@@ -17,7 +17,6 @@ type: technical-breakdown
 summary: "Two parallel leads, one from the website and one from anonymous FTP, converge into SSH access and a clean sudo path to root."
 featured: false
 ---
-# Brooklyn Nine Nine: Following Two Leads to Root
 
 Machine: [TryHackMe - Brooklyn Nine Nine](https://tryhackme.com/room/brooklynninenine)
 

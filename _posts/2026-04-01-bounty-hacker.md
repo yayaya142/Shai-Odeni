@@ -17,7 +17,6 @@ type: technical-breakdown
 summary: "Anonymous FTP leaks just enough internal material to recover a username, target SSH, and later abuse sudo tar for root."
 featured: false
 ---
-# Bounty Hacker: Turning Anonymous FTP Exposure into SSH Access and Root
 
 Machine: [Bounty Hacker](https://tryhackme.com/room/cowboyhacker)
 

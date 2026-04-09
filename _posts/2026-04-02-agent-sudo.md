@@ -17,7 +17,6 @@ type: technical-breakdown
 summary: "A web hint, weak FTP credentials, hidden data in images, and a sudo weakness combine into a steady path from recon to root."
 featured: false
 ---
-# Agent Sudo: Turning Weak Signals into Root
 
 Machine: [Agent Sudo](https://tryhackme.com/room/agentsudoctf)
 
@@ -54,7 +53,7 @@ Name: anonymous
 
 That made the website the best place to start. If FTP needed credentials, HTTP was the most likely place to leak them.
 
-## Chasing the `User-Agent` Hint
+## Chasing the User-Agent Hint
 
 The homepage returned a message that immediately changed the shape of the enumeration:
 
