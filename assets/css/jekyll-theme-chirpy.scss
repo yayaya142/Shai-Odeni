@@ -12,3 +12,20 @@
 .content .anchor {
   display: none !important;
 }
+
+/* Make the footer more compact. */
+#tail-wrapper {
+  margin-top: 1.5rem !important;
+}
+
+footer[aria-label='Site Info'] {
+  height: auto !important;
+  min-height: 0 !important;
+  font-size: 0.9rem;
+  padding-top: 0.35rem;
+  padding-bottom: 0.35rem !important;
+}
+
+footer[aria-label='Site Info'] p {
+  margin-bottom: 0.25rem;
+}
