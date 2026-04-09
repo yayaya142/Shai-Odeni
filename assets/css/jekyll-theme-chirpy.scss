@@ -13,6 +13,13 @@
   display: none !important;
 }
 
+/* Restore comfortable inner spacing for code blocks. */
+.content .highlight > pre,
+.content .highlight pre {
+  padding-left: 1rem !important;
+  padding-right: 1rem !important;
+}
+
 /* Make the footer more compact. */
 #tail-wrapper {
   margin-top: 1.5rem !important;
