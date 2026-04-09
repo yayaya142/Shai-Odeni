@@ -1,0 +1,61 @@
+lang: en
+timezone: Asia/Jerusalem
+
+title: "Shai Odeni"
+tagline: "Projects, security, and everything in between, real-world systems built, broken, and fixed."
+description: >-
+  A clean technical blog platform prepared for real posts on systems, automation,
+  infrastructure, security, tooling, and project-driven work.
+avatar: /assets/images/profile/author-profile.jpg
+
+url: "https://yayaya142.github.io"
+baseurl: "/Shai-Odeni"
+
+theme: jekyll-theme-chirpy
+
+plugins:
+  - jekyll-seo-tag
+  - jekyll-sitemap
+  - jekyll-include-cache
+
+collections:
+  tabs:
+    output: true
+    sort_by: order
+
+defaults:
+  - scope:
+      path: ""
+      type: posts
+    values:
+      layout: post
+      toc: true
+      comments: false
+      author: site
+  - scope:
+      path: ""
+      type: tabs
+    values:
+      layout: page
+      permalink: /:title/
+
+kramdown:
+  input: GFM
+  syntax_highlighter: rouge
+
+social:
+  name: Shai Odeni
+  links: []
+
+github:
+  username: "yayaya142"
+
+theme_mode:
+
+exclude:
+  - README.md
+  - docs/
+  - vendor/
+  - node_modules/
+  - Gemfile
+  - Gemfile.lock
