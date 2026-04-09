@@ -1,6 +1,6 @@
 ---
 title: "Simple: Following the Smallest Lead to Full Compromise"
-date: 2026-02-01 09:00:00 +0300
+date: 2026-01-29 09:00:00 +0300
 category: cybersecurity
 subcategories:
   - ctf

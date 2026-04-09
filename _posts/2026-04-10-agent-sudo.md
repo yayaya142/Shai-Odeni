@@ -1,6 +1,6 @@
 ---
 title: "Agent Sudo: Turning Weak Signals into Root"
-date: 2026-04-02 09:00:00 +0300
+date: 2026-04-10 09:00:00 +0300
 category: cybersecurity
 subcategories:
   - ctf

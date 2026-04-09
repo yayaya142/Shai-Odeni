@@ -1,6 +1,6 @@
 ---
 title: "Bounty Hacker: Turning Anonymous FTP Exposure into SSH Access and Root"
-date: 2026-04-01 09:00:00 +0300
+date: 2026-04-03 09:00:00 +0300
 category: cybersecurity
 subcategories:
   - ctf

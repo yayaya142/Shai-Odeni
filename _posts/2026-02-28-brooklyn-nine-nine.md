@@ -1,6 +1,6 @@
 ---
 title: "Brooklyn Nine Nine: Following Two Leads to Root"
-date: 2026-03-01 09:00:00 +0300
+date: 2026-02-28 09:00:00 +0300
 category: cybersecurity
 subcategories:
   - ctf
