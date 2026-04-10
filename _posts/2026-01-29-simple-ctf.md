@@ -16,6 +16,7 @@ tags:
 type: technical-breakdown
 summary: "A CMS Made Simple foothold turns into SSH access and root through disciplined enumeration, SQL injection, and an unsafe sudo rule on vim."
 featured: false
+pin: true
 ---
 
 Machine: [Simple CTF](https://tryhackme.com/room/easyctf)

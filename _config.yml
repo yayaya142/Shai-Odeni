@@ -12,12 +12,17 @@ url: "https://yayaya142.github.io"
 baseurl: "/Shai-Odeni"
 
 theme: jekyll-theme-chirpy
+toc: true
 
 plugins:
+  - jekyll-paginate
   - jekyll-seo-tag
   - jekyll-sitemap
   - jekyll-include-cache
   - jekyll-archives
+
+paginate: 10
+paginate_path: /page:num/
 
 jekyll-archives:
   enabled:
