@@ -1,4 +1,18 @@
 document.addEventListener('DOMContentLoaded', () => {
+  const refreshFavicon = () => {
+    const links = document.querySelectorAll(
+      'link[rel="icon"], link[rel="shortcut icon"], link[rel="apple-touch-icon"]'
+    );
+
+    links.forEach(link => {
+      const href = link.getAttribute('href');
+      if (!href) return;
+
+      const separator = href.includes('?') ? '&' : '?';
+      link.setAttribute('href', `${href}${separator}reload=${Date.now()}`);
+    });
+  };
+
   const copyText = async text => {
     if (navigator.clipboard && window.isSecureContext) {
       await navigator.clipboard.writeText(text);
@@ -39,6 +53,8 @@ document.addEventListener('DOMContentLoaded', () => {
     window.setTimeout(reset, 2000);
   };
 
+  refreshFavicon();
+
   const buttons = document.querySelectorAll('.code-header > button');
 
   buttons.forEach(button => {
@@ -62,21 +78,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const shareButton = document.getElementById('copy-link');
 
-  if (!shareButton) return;
+  if (shareButton) {
+    shareButton.addEventListener(
+      'click',
+      async event => {
+        event.preventDefault();
+        event.stopImmediatePropagation();
 
-  shareButton.addEventListener(
-    'click',
-    async event => {
-      event.preventDefault();
-      event.stopImmediatePropagation();
-
-      try {
-        await copyText(window.location.href);
-        flashSuccess(event.currentTarget);
-      } catch (error) {
-        console.error('Share copy failed:', error);
-      }
-    },
-    true
-  );
+        try {
+          await copyText(window.location.href);
+          flashSuccess(event.currentTarget);
+        } catch (error) {
+          console.error('Share copy failed:', error);
+        }
+      },
+      true
+    );
+  }
 });
