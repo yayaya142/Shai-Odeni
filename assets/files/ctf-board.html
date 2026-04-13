@@ -1,0 +1,2578 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CTF Detective Board</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+    
+    <style>
+        body {
+            background-color: #0f172a;
+            color: #e2e8f0;
+            font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            overflow: hidden;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        textarea, input[type="text"], select {
+            background-color: #1e293b;
+            color: #10b981;
+            border: 1px solid #334155;
+            border-radius: 0.5rem;
+            padding: 0.75rem;
+            font-family: 'Fira Code', 'Courier New', Courier, monospace;
+            width: 100%;
+            transition: background-color 0.3s, border-color 0.2s, color 0.3s;
+        }
+        
+        textarea { resize: none; }
+
+        textarea:focus, input[type="text"]:focus, select:focus {
+            outline: none;
+            border-color: #10b981;
+            box-shadow: 0 0 0 1px #10b981;
+        }
+
+        #network-container {
+            width: 100%;
+            height: 100%;
+            background-color: #0b0f19;
+            border-radius: 0;
+            box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.5);
+            outline: none;
+            cursor: default;
+            transition: background-color 0.3s;
+        }
+
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #0f172a; transition: background-color 0.3s; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; transition: background-color 0.3s; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+        .btn {
+            background-color: #334155;
+            color: #f8fafc;
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 600;
+            font-size: 0.8rem;
+            border: 1px solid #475569;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+        }
+        .btn:hover { background-color: #475569; }
+        .btn:disabled { opacity: 0.3; cursor: not-allowed; }
+        .btn-green { background-color: #059669; border-color: #047857; }
+        .btn-green:hover { background-color: #10b981; color: white !important; }
+        .btn-red { background-color: #be123c; border-color: #9f1239; }
+        .btn-red:hover { background-color: #e11d48; color: white !important;}
+        .btn-blue { background-color: #2563eb; border-color: #1d4ed8; }
+        .btn-blue:hover { background-color: #3b82f6; color: white !important;}
+        .btn-purple { background-color: #7e22ce; border-color: #6b21a8; }
+        .btn-purple:hover { background-color: #9333ea; color: white !important;}
+        .btn-orange { background-color: #ea580c; border-color: #c2410c; }
+        .btn-orange:hover { background-color: #f97316; color: white !important;}
+        .btn-pink { background-color: #db2777; border-color: #be185d; }
+        .btn-pink:hover { background-color: #ec4899; color: white !important;}
+
+        .context-menu {
+            display: none;
+            position: absolute;
+            z-index: 50;
+            background-color: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 0.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+            min-width: 180px;
+            overflow: hidden;
+            padding: 0.25rem 0;
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+        
+        .context-menu-item {
+            padding: 0.5rem 1rem;
+            font-size: 0.875rem;
+            color: #cbd5e1;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .context-menu-item:hover {
+            background-color: #334155;
+            color: #10b981;
+        }
+
+        .context-menu-item.delete:hover {
+            background-color: #7f1d1d;
+            color: #fca5a5;
+        }
+        
+        .context-menu-item.cascade:hover {
+            background-color: #7f1d1d;
+            color: #f87171;
+            font-weight: bold;
+        }
+
+        #floatingInputContainer {
+            display: none;
+            position: absolute;
+            z-index: 60;
+            background-color: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 0.75rem;
+            padding: 1rem;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            width: 340px;
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+
+        .phase-selector {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .phase-btn {
+            font-size: 0.7rem;
+            padding: 0.25rem;
+            border-radius: 0.25rem;
+            border: 1px solid transparent;
+            cursor: pointer;
+            text-align: center;
+            font-weight: bold;
+            opacity: 0.6;
+            transition: all 0.2s;
+        }
+        
+        .phase-btn.selected {
+            opacity: 1;
+            border-color: white;
+            box-shadow: 0 0 8px currentColor;
+        }
+
+        .phase-recon { background: #1e3a8a; color: #93c5fd; }
+        .phase-enum { background: #4c1d95; color: #c4b5fd; }
+        .phase-exploit { background: #7f1d1d; color: #fca5a5; }
+        .phase-post { background: #7c2d12; color: #fdba74; }
+        .phase-privesc { background: #854d0e; color: #fef08a; }
+        .phase-loot { background: #064e3b; color: #6ee7b7; }
+        .phase-none { background: #334155; color: #cbd5e1; }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 100;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 0.75rem;
+            width: 800px;
+            max-width: 95%;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+
+        .data-item {
+            background-color: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 0.375rem;
+            padding: 0.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.75rem;
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+
+        #linkingBanner {
+            display: none;
+            position: absolute;
+            top: 1rem;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #2563eb;
+            color: white;
+            padding: 0.5rem 1.5rem;
+            border-radius: 9999px;
+            font-weight: bold;
+            font-size: 0.875rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            z-index: 40;
+            align-items: center;
+            gap: 0.5rem;
+            border: 1px solid #60a5fa;
+            animation: pulseBanner 2s infinite;
+        }
+
+        @keyframes pulseBanner {
+            0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(59, 130, 246, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+        }
+
+        #customHoverTooltip {
+            display: none;
+            position: fixed;
+            z-index: 9999;
+            background-color: #1e293b;
+            border: 1px solid #475569;
+            border-radius: 0.5rem;
+            padding: 0.75rem;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+            max-width: 450px;
+            max-height: 350px;
+            overflow-y: auto;
+            pointer-events: none;
+            flex-direction: column;
+            gap: 0.75rem;
+            transform: translate(15px, 15px);
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+
+        .tooltip-section {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+        
+        .tooltip-title {
+            font-size: 0.65rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            color: #94a3b8;
+            letter-spacing: 0.05em;
+            border-bottom: 1px solid #334155;
+            padding-bottom: 2px;
+            transition: border-color 0.3s, color 0.3s;
+        }
+
+        .tooltip-content {
+            background-color: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 0.25rem;
+            padding: 0.5rem;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.75rem;
+            color: #10b981;
+            white-space: pre-wrap;
+            word-break: break-word;
+            display: block;
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+        .tooltip-content.note { color: #fde047; }
+        .tooltip-content.out { color: #cbd5e1; }
+        
+        .floating-tools {
+            position: absolute;
+            bottom: 1rem;
+            left: 1rem;
+            display: flex;
+            gap: 0.5rem;
+            z-index: 50;
+        }
+
+        .tool-btn {
+            background-color: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            opacity: 0.6;
+            transition: all 0.2s;
+            font-size: 1rem;
+        }
+        .tool-btn:hover { opacity: 1; transform: scale(1.1); background-color: #334155; }
+
+        /* =========================================
+           LIGHT THEME OVERRIDES ☀️
+           ========================================= */
+        body.light-theme { background-color: #f8fafc; color: #0f172a; }
+        
+        body.light-theme header { background-color: #ffffff; border-color: #cbd5e1; box-shadow: 0 1px 2px 0 rgba(0,0,0,0.05); }
+        body.light-theme #sidebar { background-color: #f8fafc; border-color: #cbd5e1; }
+        body.light-theme .bg-slate-950 { background-color: #f1f5f9 !important; }
+        body.light-theme #network-container { background-color: #f1f5f9; box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.05); }
+        
+        body.light-theme .bg-slate-900 { background-color: #ffffff !important; }
+        body.light-theme .bg-slate-800 { background-color: #f8fafc !important; }
+        body.light-theme .border-slate-800, body.light-theme .border-slate-700 { border-color: #cbd5e1 !important; }
+        
+        body.light-theme .text-slate-400, body.light-theme .text-slate-300 { color: #475569 !important; }
+        body.light-theme .text-slate-500 { color: #64748b !important; }
+        
+        body.light-theme textarea, 
+        body.light-theme input[type="text"], 
+        body.light-theme select {
+            background-color: #ffffff;
+            border-color: #cbd5e1;
+            color: #0f172a;
+        }
+        body.light-theme textarea:focus, 
+        body.light-theme input[type="text"]:focus, 
+        body.light-theme select:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 1px #3b82f6;
+        }
+        
+        body.light-theme .data-item { background-color: #ffffff; border-color: #e2e8f0; }
+        body.light-theme .btn.bg-slate-700 { background-color: #e2e8f0 !important; color: #0f172a !important; }
+        body.light-theme .btn.bg-slate-700:hover { background-color: #cbd5e1 !important; color: #0f172a !important; }
+        
+        body.light-theme .text-blue-300 { color: #2563eb !important; }
+        body.light-theme .text-red-300 { color: #dc2626 !important; }
+        body.light-theme .text-yellow-300 { color: #d97706 !important; }
+        body.light-theme .text-yellow-500 { color: #b45309 !important; }
+        body.light-theme .text-emerald-400, body.light-theme .text-emerald-300 { color: #059669 !important; }
+        body.light-theme .text-purple-300, body.light-theme .text-purple-400 { color: #7e22ce !important; }
+        body.light-theme .text-slate-200 { color: #1e293b !important; }
+
+        body.light-theme .tool-btn { background-color: #ffffff; border-color: #cbd5e1; color: #0f172a; }
+        body.light-theme .tool-btn:hover { background-color: #f1f5f9; }
+        
+        body.light-theme #customHoverTooltip, body.light-theme .context-menu, body.light-theme #floatingInputContainer, body.light-theme .modal-content { 
+            background-color: #ffffff; border-color: #cbd5e1; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); 
+        }
+        body.light-theme .tooltip-content { background-color: #f8fafc; border-color: #e2e8f0; color: #0f172a; }
+        body.light-theme .tooltip-content.out { color: #334155; }
+        body.light-theme .tooltip-content.note { color: #854d0e; }
+        body.light-theme .tooltip-title { color: #475569; border-bottom-color: #e2e8f0; }
+        body.light-theme .context-menu-item { color: #1e293b; }
+        body.light-theme .context-menu-item:hover { background-color: #f1f5f9; color: #2563eb; }
+        body.light-theme .context-menu-item.delete:hover { background-color: #fee2e2; color: #dc2626; }
+        body.light-theme .context-menu-item.cascade:hover { background-color: #fee2e2; color: #991b1b; }
+        body.light-theme .border-t.border-slate-700 { border-color: #e2e8f0 !important; }
+        
+        body.light-theme ::-webkit-scrollbar-track { background: #f1f5f9; }
+        body.light-theme ::-webkit-scrollbar-thumb { background: #cbd5e1; }
+        body.light-theme ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        /* Ensures button text overrides in Light Mode */
+        body.light-theme .btn-green { color: white !important; }
+        body.light-theme .btn-red { color: white !important; }
+        body.light-theme .btn-blue { color: white !important; }
+        body.light-theme .btn-purple { color: white !important; }
+        body.light-theme .btn-orange { color: white !important; }
+        body.light-theme .btn-pink { color: white !important; }
+
+    </style>
+</head>
+<body class="h-screen flex flex-col">
+
+    <header class="bg-slate-900 border-b border-slate-800 p-3 flex justify-between items-center z-10 shadow-md">
+        <div class="flex items-center gap-3">
+            <h1 class="text-xl font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-cyan-500">CTF BOARD</h1>
+        </div>
+        
+        <div class="flex gap-2 bg-slate-800 p-1 rounded-lg border border-slate-700 items-center">
+            <button id="themeToggleBtn" onclick="toggleGlobalTheme()" class="btn bg-slate-700 border-none hover:bg-slate-600 px-2" title="Toggle Light/Dark Mode">☀️</button>
+            <div class="w-px h-5 bg-slate-600 mx-1"></div>
+            <button id="btnUndo" onclick="undo()" class="btn bg-slate-700 border-none hover:bg-slate-600 disabled:opacity-30" disabled title="Undo">↩️</button>
+            <button id="btnRedo" onclick="redo()" class="btn bg-slate-700 border-none hover:bg-slate-600 disabled:opacity-30" disabled title="Redo">↪️</button>
+            <div class="w-px h-5 bg-slate-600 mx-1"></div>
+            <button onclick="centerGraph()" class="btn bg-slate-700 border-none hover:bg-slate-600" title="Center View">🎯 Center</button>
+            <button onclick="autoArrangeGraph()" class="btn bg-slate-700 border-none hover:bg-slate-600 text-emerald-400" title="Organize by BFS Level">🪄 Arrange</button>
+        </div>
+
+        <div class="flex gap-2">
+            <button onclick="openAiPromptModal()" class="btn btn-purple">🤖 AI Prompt</button>
+            <button onclick="openIOModal('import')" class="btn btn-blue">📥 Import</button>
+            <button onclick="openIOModal('export')" class="btn btn-green">📤 MD</button>
+            <button id="btnExportImage" onclick="openVisualExportModal('png')" class="btn btn-orange">🖼️ Image</button>
+            <button id="btnExportSVG" onclick="openVisualExportModal('svg')" class="btn btn-pink">🗺️ SVG</button>
+            <button onclick="safeClearAll()" class="btn btn-red">🧹 Save & Clear</button>
+        </div>
+    </header>
+
+    <div class="flex-1 flex overflow-hidden relative" id="mainWrapper">
+        
+        <!-- Sidebar -->
+        <div id="sidebar" class="flex-shrink-0 bg-slate-900 border-r border-slate-800 flex flex-col transition-[width] duration-300 overflow-hidden relative z-10" style="width: 340px;">
+            <div class="p-4 flex flex-col gap-6 w-[340px] h-full overflow-y-auto">
+                
+                <div class="flex flex-col gap-1 shrink-0">
+                    <label class="text-[0.65rem] text-slate-400 uppercase font-bold tracking-widest flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-purple-500"></span> CTF / Exercise Name
+                    </label>
+                    <input type="text" id="ctfNameInput" class="text-sm text-purple-300 font-bold bg-slate-800 border-slate-700 p-2" placeholder="e.g. HTB - Optimum">
+                </div>
+
+                <div class="flex flex-col gap-1 shrink-0">
+                    <label class="text-[0.65rem] text-slate-400 uppercase font-bold tracking-widest flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-blue-500"></span> Target & IPs
+                    </label>
+                    <textarea id="targetNotes" class="h-20 text-sm text-blue-300 p-2"></textarea>
+                </div>
+                
+                <div class="flex flex-col gap-1 shrink-0">
+                    <label class="text-[0.65rem] text-slate-400 uppercase font-bold tracking-widest flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-red-500"></span> Credentials
+                    </label>
+                    <div class="flex flex-col bg-slate-800 border border-slate-700 rounded-lg p-2">
+                        <div class="flex flex-col gap-2 mb-3 pb-3 border-b border-slate-700">
+                            <div class="flex gap-2">
+                                <select id="credServiceSelect" class="p-1 text-xs bg-slate-900 w-1/2" onchange="toggleCustomCredInput()">
+                                    <option value="SSH">SSH</option>
+                                    <option value="SMB">SMB</option>
+                                    <option value="FTP">FTP</option>
+                                    <option value="RDP">RDP</option>
+                                    <option value="Web">Web</option>
+                                    <option value="DB">Database</option>
+                                    <option value="Kerberos">Kerberos</option>
+                                    <option value="Custom">Custom...</option>
+                                </select>
+                                <input type="text" id="credCustomInput" class="p-1 text-xs bg-slate-900 w-1/2 hidden" placeholder="Service Name">
+                            </div>
+                            <div class="flex gap-2">
+                                <input type="text" id="credUserInput" class="p-1 text-xs bg-slate-900 w-1/2" placeholder="Username">
+                                <input type="text" id="credPassInput" class="p-1 text-xs bg-slate-900 w-1/2" placeholder="Password">
+                            </div>
+                            <button onclick="addCredential()" class="btn btn-green w-full py-1 text-xs mt-1">➕ Save Credential</button>
+                        </div>
+                        <div id="credListContainer" class="flex flex-col gap-2 pr-1"></div>
+                    </div>
+                </div>
+
+                <div class="flex flex-col gap-1 shrink-0 pb-6">
+                    <label class="text-[0.65rem] text-slate-400 uppercase font-bold tracking-widest flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-yellow-500"></span> Loot & Structured Notes
+                    </label>
+                    <div class="flex flex-col bg-slate-800 border border-slate-700 rounded-lg p-2">
+                        <div class="flex flex-col gap-2 mb-3 pb-3 border-b border-slate-700">
+                            <div class="flex gap-2">
+                                <select id="lootTypeSelect" class="p-1 text-xs bg-slate-900 w-1/3">
+                                    <option value="Flag">🚩 Flag</option>
+                                    <option value="Account">👤 Account</option>
+                                    <option value="Hash">🔑 Hash/Key</option>
+                                    <option value="Info">ℹ️ Info</option>
+                                    <option value="Note">📝 Note</option>
+                                </select>
+                                <input type="text" id="lootTitleInput" class="p-1 text-xs bg-slate-900 w-2/3" placeholder="Title (e.g. user.txt)">
+                            </div>
+                            <textarea id="lootContentInput" class="h-16 p-1 text-xs bg-slate-900 w-full" placeholder="Value / Content..."></textarea>
+                            <button onclick="addLoot()" class="btn btn-yellow w-full py-1 text-xs mt-1" style="background-color: #ca8a04; border-color: #a16207; color: white;">➕ Save Loot</button>
+                        </div>
+                        <div id="lootListContainer" class="flex flex-col gap-2 pr-1"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex-1 relative bg-slate-950 flex" id="graphArea">
+            <button onclick="toggleSidebar()" id="sidebarToggleBtn" class="absolute left-0 top-1/2 z-50 transform -translate-y-1/2 -translate-x-1/2 bg-slate-800 hover:bg-slate-700 text-emerald-400 rounded-full w-8 h-8 flex items-center justify-center cursor-pointer border border-slate-600 shadow-lg transition-colors">
+               ◀
+            </button>
+
+            <div class="floating-tools">
+                <div class="tool-btn" onclick="openLogModal()" title="View Debug Logs">🐛</div>
+                <div class="tool-btn" onclick="runStressTest()" title="Stress Test (500 Nodes)">🧪</div>
+            </div>
+
+            <div id="linkingBanner" class="hidden flex">
+                <span>🔗 Click the target node to connect from:</span>
+                <span id="linkingSourceName" class="font-black text-emerald-300 ml-1 mr-2"></span>
+                <span class="text-xs font-normal opacity-80">(Press ESC to cancel)</span>
+            </div>
+
+            <div id="customHoverTooltip"></div>
+
+            <div id="network-container" class="w-full h-full"></div>
+            
+            <div id="contextMenu" class="context-menu">
+                <div id="menuAddChild" class="context-menu-item" onclick="handleMenuAction('addChild')">➕ Add Sub-Vector</div>
+                <div id="menuAddBulk" class="context-menu-item text-purple-400 font-bold" onclick="handleMenuAction('addBulk')">⚡ Quick Bulk Add</div>
+                <div id="menuLinkNode" class="context-menu-item" onclick="handleMenuAction('linkNode')">🔗 Connect to Node...</div>
+                <div id="menuAddRoot" class="context-menu-item" onclick="handleMenuAction('addRoot')">🌟 Add Root Vector</div>
+                <div class="border-t border-slate-700 my-1"></div>
+                <div id="menuViewData" class="context-menu-item font-bold text-emerald-400" onclick="handleMenuAction('viewData')">💻 Code & Notes</div>
+                <div id="menuEdit" class="context-menu-item" onclick="handleMenuAction('edit')">✏️ Edit Node Name</div>
+                <div id="menuDeleteSingle" class="context-menu-item delete" onclick="handleMenuAction('deleteSingle')">🗑️ Delete (Keep Children)</div>
+                <div id="menuDeleteCascade" class="context-menu-item cascade" onclick="handleMenuAction('deleteCascade')">🧨 Delete (With Children)</div>
+            </div>
+
+            <div id="edgeContextMenu" class="context-menu">
+                <div class="context-menu-item delete" onclick="deleteSelectedEdge()">✂️ Disconnect Vector</div>
+            </div>
+
+            <div id="floatingInputContainer">
+                <div class="text-xs text-slate-400 mb-2 font-bold uppercase tracking-wider">Select Phase</div>
+                <div class="phase-selector" id="phaseSelector">
+                    <div class="phase-btn phase-recon" data-phase="recon">1. Recon</div>
+                    <div class="phase-btn phase-enum" data-phase="enum">2. Enum</div>
+                    <div class="phase-btn phase-exploit" data-phase="exploit">3. Exploit</div>
+                    <div class="phase-btn phase-post" data-phase="post">4. Post</div>
+                    <div class="phase-btn phase-privesc" data-phase="privesc">5. PrivEsc</div>
+                    <div class="phase-btn phase-loot" data-phase="loot">6. Loot</div>
+                    <div class="phase-btn phase-none col-span-3 selected" data-phase="none">Default</div>
+                </div>
+                <div class="flex gap-2">
+                    <input type="text" id="floatingInput" placeholder="Node name (comma for multiple)..." autocomplete="off" class="flex-1">
+                    <button id="btnSubmitFloating" onclick="submitFloatingInput()" class="btn btn-green px-3">✔️</button>
+                </div>
+                <div class="text-[0.65rem] text-slate-500 mt-2 text-right">Press Enter or click ✔️ to save, Esc to cancel</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <div id="visualExportModal" class="modal-overlay">
+        <div class="modal-content" style="width: 400px;">
+            <div class="flex justify-between items-center p-4 border-b border-slate-700 bg-slate-800 rounded-t-xl">
+                <h2 id="visualExportTitle" class="font-bold text-lg text-pink-400">🗺️ Export Snapshot</h2>
+                <button onclick="closeVisualExportModal()" class="text-slate-400 hover:text-white text-xl leading-none">&times;</button>
+            </div>
+            <div class="p-6 flex justify-center gap-4 bg-slate-900 rounded-b-xl">
+                <button onclick="processVisualExport('dark')" class="btn bg-slate-800 border border-slate-600 hover:bg-slate-700 px-6 py-4 flex flex-col items-center gap-2">
+                    <span class="text-2xl">🌙</span>
+                    <span>Dark Mode</span>
+                </button>
+                <button onclick="processVisualExport('light')" class="btn bg-slate-100 text-slate-900 border border-slate-300 hover:bg-slate-200 px-6 py-4 flex flex-col items-center gap-2">
+                    <span class="text-2xl">☀️</span>
+                    <span>Light Mode</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="bulkAddModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="flex justify-between items-center p-4 border-b border-slate-700 bg-slate-800 rounded-t-xl">
+                <h2 class="font-bold text-lg text-purple-400">⚡ Bulk Add Nodes</h2>
+                <button onclick="closeBulkAddModal()" class="text-slate-400 hover:text-white text-xl leading-none">&times;</button>
+            </div>
+            <div class="p-4 flex flex-col gap-2 overflow-y-auto">
+                <p class="text-xs text-slate-400">Paste a list of nodes formatted by the AI (or manually written).<br>Use <code class="text-purple-300 bg-slate-900 px-1 rounded">* Node Name {phase}</code> to create a node, followed by <code class="text-emerald-300 bg-slate-900 px-1 rounded">&gt; CMD: \`...\`</code>, <code class="text-slate-300 bg-slate-900 px-1 rounded">&gt; OUT: \`...\`</code>, or <code class="text-yellow-300 bg-slate-900 px-1 rounded">&gt; NOTE: \`...\`</code>.</p>
+                <textarea id="bulkAddInput" class="h-64 text-sm text-slate-200 font-mono" placeholder="* 22/tcp SSH {enum}&#10;  > OUT: `OpenSSH 8.2p1 Ubuntu...`&#10;* 80/tcp HTTP {enum}&#10;  > NOTE: `Running Apache`"></textarea>
+            </div>
+            <div class="p-4 border-t border-slate-700 bg-slate-800 rounded-b-xl flex justify-end gap-2">
+                <button onclick="closeBulkAddModal()" class="btn bg-slate-700 border-none">Cancel</button>
+                <button onclick="saveBulkAddModal()" class="btn btn-purple">🚀 Process & Add</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="nodeDataModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="flex justify-between items-center p-4 border-b border-slate-700 bg-slate-800 rounded-t-xl">
+                <h2 id="dataModalTitle" class="font-bold text-lg text-emerald-400">Node Data</h2>
+                <button onclick="closeNodeDataModal()" class="text-slate-400 hover:text-white text-xl leading-none">&times;</button>
+            </div>
+            <div class="p-4 flex flex-col gap-4 overflow-y-auto">
+                <div class="flex flex-col gap-1">
+                    <label class="text-xs text-slate-400 font-bold uppercase">Terminal Command</label>
+                    <textarea id="nodeCommandInput" class="h-20 text-sm text-emerald-300" placeholder="e.g. nmap -sC -sV 10.10.10.10"></textarea>
+                </div>
+                <div class="flex flex-col gap-1 flex-1 min-h-[120px]">
+                    <label class="text-xs text-slate-400 font-bold uppercase">Console Output / Findings</label>
+                    <textarea id="nodeOutputInput" class="h-full text-sm text-slate-300" placeholder="Paste full output here..."></textarea>
+                </div>
+                <div class="flex flex-col gap-1 h-32">
+                    <label class="text-xs text-slate-400 font-bold uppercase">Personal Notes</label>
+                    <textarea id="nodeNoteInput" class="h-full text-sm text-yellow-300" placeholder="Your thoughts or observations regarding this vector..."></textarea>
+                </div>
+            </div>
+            <div class="p-4 border-t border-slate-700 bg-slate-800 rounded-b-xl flex justify-end gap-2">
+                <button onclick="closeNodeDataModal()" class="btn bg-slate-700 border-none">Cancel</button>
+                <button onclick="saveNodeDataModal()" class="btn btn-green">💾 Save Data</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="ioModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="flex justify-between items-center p-4 border-b border-slate-700 bg-slate-800 rounded-t-xl">
+                <h2 id="ioModalTitle" class="font-bold text-lg text-emerald-400">Modal Title</h2>
+                <button onclick="closeIOModal()" class="text-slate-400 hover:text-white text-xl leading-none">&times;</button>
+            </div>
+            <div class="p-4 flex-1 overflow-hidden flex flex-col">
+                <div id="ioModalToolbar" class="hidden mb-3 flex gap-2">
+                    <button id="btnPromptFull" onclick="setAIPrompt('full')" class="btn bg-purple-600 border-none hover:bg-purple-500">📄 Full Report</button>
+                    <button id="btnPromptBulk" onclick="setAIPrompt('bulk')" class="btn bg-slate-700 border-none hover:bg-purple-500">⚡ Bulk Add Nodes</button>
+                </div>
+                <p id="ioModalDesc" class="text-sm text-slate-400 mb-2 hidden"></p>
+                <textarea id="ioModalTextarea" class="flex-1 h-80 text-sm font-mono"></textarea>
+            </div>
+            <div id="ioModalFooter" class="p-4 border-t border-slate-700 bg-slate-800 rounded-b-xl flex justify-between items-center gap-2">
+            </div>
+        </div>
+        <input type="file" id="hiddenFileInput" accept=".md" class="hidden" onchange="handleFileUpload(event)">
+    </div>
+    
+    <div id="logModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="flex justify-between items-center p-4 border-b border-slate-700 bg-slate-800 rounded-t-xl">
+                <h2 class="font-bold text-lg text-slate-300">🐛 System Logs</h2>
+                <button onclick="closeLogModal()" class="text-slate-400 hover:text-white text-xl leading-none">&times;</button>
+            </div>
+            <div class="p-4 flex-1 overflow-hidden flex flex-col">
+                <textarea id="logTextarea" class="flex-1 h-80 text-xs font-mono bg-slate-900 text-slate-400" readonly></textarea>
+            </div>
+            <div class="p-4 border-t border-slate-700 bg-slate-800 rounded-b-xl flex justify-end gap-2">
+                <button onclick="closeLogModal()" class="btn bg-slate-700 border-none">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <textarea id="hiddenCopyArea" style="position: absolute; left: -9999px;"></textarea>
+
+    <script>
+        // --- Debug Logger ---
+        const appLogs = [];
+        function logMsg(msg, type='INFO') {
+            const ts = new Date().toISOString().split('T')[1].split('.')[0];
+            appLogs.push(`[${ts}] [${type}] ${msg}`);
+            if (appLogs.length > 200) appLogs.shift();
+            console.log(`[CTF Board] ${msg}`);
+        }
+        window.onerror = function(msg, url, line) { 
+            logMsg(`${msg} (Line ${line})`, 'ERROR'); 
+            return false; 
+        };
+
+        function openLogModal() {
+            document.getElementById('logTextarea').value = appLogs.join('\n');
+            document.getElementById('logModal').style.display = 'flex';
+        }
+        function closeLogModal() {
+            document.getElementById('logModal').style.display = 'none';
+        }
+
+        // DOM Elements
+        const sidebar = document.getElementById('sidebar');
+        const sidebarToggleBtn = document.getElementById('sidebarToggleBtn');
+        const ctfNameInput = document.getElementById('ctfNameInput');
+        const targetNotes = document.getElementById('targetNotes');
+        const container = document.getElementById('network-container');
+        const graphArea = document.getElementById('graphArea');
+        const contextMenu = document.getElementById('contextMenu');
+        const edgeContextMenu = document.getElementById('edgeContextMenu');
+        const floatingInputContainer = document.getElementById('floatingInputContainer');
+        const floatingInput = document.getElementById('floatingInput');
+        const phaseBtns = document.querySelectorAll('.phase-btn');
+        const hiddenCopyArea = document.getElementById('hiddenCopyArea');
+        const customHoverTooltip = document.getElementById('customHoverTooltip');
+
+        // Credentials DOM
+        const credServiceSelect = document.getElementById('credServiceSelect');
+        const credCustomInput = document.getElementById('credCustomInput');
+        const credUserInput = document.getElementById('credUserInput');
+        const credPassInput = document.getElementById('credPassInput');
+        const credListContainer = document.getElementById('credListContainer');
+        
+        // Loot DOM
+        const lootTypeSelect = document.getElementById('lootTypeSelect');
+        const lootTitleInput = document.getElementById('lootTitleInput');
+        const lootContentInput = document.getElementById('lootContentInput');
+        const lootListContainer = document.getElementById('lootListContainer');
+
+        const nodeDataModal = document.getElementById('nodeDataModal');
+        const dataModalTitle = document.getElementById('dataModalTitle');
+        const nodeCommandInput = document.getElementById('nodeCommandInput');
+        const nodeOutputInput = document.getElementById('nodeOutputInput');
+        const nodeNoteInput = document.getElementById('nodeNoteInput');
+
+        const bulkAddModal = document.getElementById('bulkAddModal');
+        const bulkAddInput = document.getElementById('bulkAddInput');
+        const visualExportModal = document.getElementById('visualExportModal');
+        const visualExportTitle = document.getElementById('visualExportTitle');
+        let currentVisualExportFormat = 'png';
+
+        const ioModal = document.getElementById('ioModal');
+        const ioModalTitle = document.getElementById('ioModalTitle');
+        const ioModalDesc = document.getElementById('ioModalDesc');
+        const ioModalTextarea = document.getElementById('ioModalTextarea');
+        const ioModalFooter = document.getElementById('ioModalFooter');
+        const hiddenFileInput = document.getElementById('hiddenFileInput');
+        
+        const linkingBanner = document.getElementById('linkingBanner');
+        const linkingSourceName = document.getElementById('linkingSourceName');
+        
+        const themeToggleBtn = document.getElementById('themeToggleBtn');
+
+        // Graph Data & State
+        let network = null;
+        let nodes = new vis.DataSet([]);
+        let edges = new vis.DataSet([]);
+        
+        let credentialsArray = [];
+        let lootArray = []; 
+
+        let contextNodeId = null;
+        let contextEdgeId = null;
+        let currentAction = null;
+        let lastClickPosition = { x: 0, y: 0 };
+        let selectedPhase = 'none';
+        let isSidebarOpen = true;
+        
+        let isLinkingMode = false;
+        let linkingSourceId = null;
+        
+        let currentTheme = 'dark';
+
+        const DEFAULT_TARGET_TEXT = "My IP: \nTarget 1 IP: ";
+
+        let historyStack = [];
+        let redoStack = [];
+
+        // Phase Configuration (Dark)
+        const phasesDark = {
+            recon:   { tag: '[1. Recon]', bg: '#1e3a8a', border: '#60a5fa', font: '#bfdbfe' },
+            enum:    { tag: '[2. Enum]',  bg: '#4c1d95', border: '#a78bfa', font: '#ddd6fe' },
+            exploit: { tag: '[3. Exploit]',bg: '#7f1d1d', border: '#f87171', font: '#fecaca' },
+            post:    { tag: '[4. Post]',  bg: '#7c2d12', border: '#fb923c', font: '#fed7aa' },
+            privesc: { tag: '[5. PrivEsc]',bg: '#854d0e', border: '#facc15', font: '#fef08a' }, 
+            loot:    { tag: '[6. Loot]',  bg: '#064e3b', border: '#34d399', font: '#a7f3d0' }, 
+            none:    { tag: '',           bg: '#1e293b', border: '#94a3b8', font: '#f8fafc' }
+        };
+
+        // Phase Configuration (Light)
+        const phasesLight = {
+            recon:   { tag: '[1. Recon]', bg: '#dbeafe', border: '#3b82f6', font: '#1e3a8a' },
+            enum:    { tag: '[2. Enum]',  bg: '#f3e8ff', border: '#8b5cf6', font: '#4c1d95' },
+            exploit: { tag: '[3. Exploit]',bg: '#fee2e2', border: '#ef4444', font: '#7f1d1d' },
+            post:    { tag: '[4. Post]',  bg: '#ffedd5', border: '#f97316', font: '#7c2d12' },
+            privesc: { tag: '[5. PrivEsc]',bg: '#fef08a', border: '#eab308', font: '#854d0e' }, 
+            loot:    { tag: '[6. Loot]',  bg: '#d1fae5', border: '#10b981', font: '#064e3b' }, 
+            none:    { tag: '',           bg: '#f1f5f9', border: '#94a3b8', font: '#1e293b' }
+        };
+
+        let currentPhases = phasesDark; 
+
+        logMsg("Application Initialization Started");
+        
+        // --- Theme Logic ---
+        function toggleGlobalTheme() {
+            currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            applyTheme(currentTheme);
+            saveState();
+        }
+
+        function applyTheme(theme) {
+            if (theme === 'light') {
+                document.body.classList.add('light-theme');
+                themeToggleBtn.innerHTML = '🌙';
+                currentPhases = phasesLight;
+                if (network) network.setOptions({ edges: { color: { color: '#94a3b8' } } });
+            } else {
+                document.body.classList.remove('light-theme');
+                themeToggleBtn.innerHTML = '☀️';
+                currentPhases = phasesDark;
+                if (network) network.setOptions({ edges: { color: { color: '#475569' } } });
+            }
+            if (nodes.length > 0) updateAllNodesColor();
+        }
+
+        // --- Copy Helper ---
+        function copyToClipboard(text) {
+            hiddenCopyArea.value = text;
+            hiddenCopyArea.select();
+            document.execCommand('copy');
+        }
+
+        // --- Credentials Logic ---
+        function toggleCustomCredInput() {
+            if (credServiceSelect.value === 'Custom') {
+                credServiceSelect.classList.replace('w-1/2', 'w-1/3');
+                credCustomInput.classList.remove('hidden');
+                credCustomInput.classList.add('w-2/3');
+                credCustomInput.focus();
+            } else {
+                credServiceSelect.classList.replace('w-1/3', 'w-1/2');
+                credCustomInput.classList.add('hidden');
+                credCustomInput.classList.remove('w-2/3');
+                credCustomInput.value = '';
+            }
+        }
+
+        function addCredential() {
+            let service = credServiceSelect.value;
+            if (service === 'Custom') {
+                service = credCustomInput.value.trim();
+                if (!service) service = 'Custom';
+            }
+            const user = credUserInput.value.trim();
+            const pass = credPassInput.value.trim();
+            
+            if (!user && !pass) return;
+
+            const id = Date.now().toString() + Math.floor(Math.random() * 1000).toString();
+            
+            recordState(); 
+            credentialsArray.push({ id, service, user, pass });
+            
+            credUserInput.value = '';
+            credPassInput.value = '';
+            if (credServiceSelect.value === 'Custom') credCustomInput.value = '';
+            
+            renderCredentials();
+            saveState();
+            logMsg("Added credential");
+        }
+
+        function editCredential(id) {
+            const cred = credentialsArray.find(c => c.id === id);
+            if (!cred) return;
+            
+            credUserInput.value = cred.user;
+            credPassInput.value = cred.pass;
+            
+            const standardOptions = Array.from(credServiceSelect.options).map(o => o.value);
+            if (standardOptions.includes(cred.service)) {
+                credServiceSelect.value = cred.service;
+                toggleCustomCredInput();
+            } else {
+                credServiceSelect.value = 'Custom';
+                toggleCustomCredInput();
+                credCustomInput.value = cred.service;
+            }
+            
+            recordState();
+            credentialsArray = credentialsArray.filter(c => c.id !== id);
+            renderCredentials();
+            saveState();
+        }
+
+        function removeCredential(id, skipConfirm = false) {
+            if (!skipConfirm && !confirm("Are you sure you want to delete this credential?")) return;
+            recordState(); 
+            credentialsArray = credentialsArray.filter(c => c.id !== id);
+            renderCredentials();
+            saveState();
+        }
+
+        function copyCred(type, text) {
+            if (!text || text === '-') return;
+            copyToClipboard(text);
+        }
+
+        function renderCredentials() {
+            credListContainer.innerHTML = '';
+            if (credentialsArray.length === 0) {
+                credListContainer.innerHTML = '<div class="text-xs text-slate-500 italic text-center mt-2">No credentials added yet.</div>';
+                return;
+            }
+
+            const grouped = credentialsArray.reduce((acc, cred) => {
+                if (!acc[cred.service]) acc[cred.service] = [];
+                acc[cred.service].push(cred);
+                return acc;
+            }, {});
+
+            for (const [service, creds] of Object.entries(grouped)) {
+                const groupDiv = document.createElement('div');
+                groupDiv.className = 'mb-2';
+                
+                const header = document.createElement('div');
+                header.className = 'text-[0.65rem] font-bold text-slate-400 mb-1 border-b border-slate-700 pb-1';
+                header.textContent = service.toUpperCase();
+                groupDiv.appendChild(header);
+
+                creds.forEach(cred => {
+                    const itemDiv = document.createElement('div');
+                    itemDiv.className = 'data-item';
+                    
+                    const textDiv = document.createElement('div');
+                    textDiv.className = 'flex justify-between items-start';
+                    textDiv.innerHTML = `
+                        <div class="flex flex-col gap-1 w-full overflow-hidden">
+                            <span class="text-emerald-400 font-bold truncate">U: ${cred.user || '-'}</span>
+                            <span class="text-red-300 truncate">P: ${cred.pass || '-'}</span>
+                        </div>
+                    `;
+
+                    const actionsDiv = document.createElement('div');
+                    actionsDiv.className = 'flex gap-1 mt-1 justify-end';
+                    
+                    const copyUserBtn = document.createElement('button');
+                    copyUserBtn.className = 'bg-slate-700 hover:bg-slate-600 text-slate-300 rounded px-2 py-1 text-[0.6rem] transition-colors';
+                    copyUserBtn.textContent = '📋 User';
+                    copyUserBtn.onclick = () => copyCred('User', cred.user);
+                    if (!cred.user) copyUserBtn.classList.add('opacity-50', 'cursor-not-allowed');
+
+                    const copyPassBtn = document.createElement('button');
+                    copyPassBtn.className = 'bg-slate-700 hover:bg-slate-600 text-slate-300 rounded px-2 py-1 text-[0.6rem] transition-colors';
+                    copyPassBtn.textContent = '📋 Pass';
+                    copyPassBtn.onclick = () => copyCred('Pass', cred.pass);
+                    if (!cred.pass) copyPassBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                    
+                    const editBtn = document.createElement('button');
+                    editBtn.className = 'bg-slate-700 hover:bg-blue-600 text-slate-300 rounded px-2 py-1 text-[0.6rem] transition-colors';
+                    editBtn.textContent = '✏️';
+                    editBtn.onclick = () => editCredential(cred.id);
+
+                    const delBtn = document.createElement('button');
+                    delBtn.className = 'bg-slate-700 hover:bg-red-900 text-slate-300 rounded px-2 py-1 text-[0.6rem] transition-colors';
+                    delBtn.textContent = '🗑️';
+                    delBtn.onclick = () => removeCredential(cred.id);
+
+                    actionsDiv.appendChild(copyUserBtn);
+                    actionsDiv.appendChild(copyPassBtn);
+                    actionsDiv.appendChild(editBtn);
+                    actionsDiv.appendChild(delBtn);
+
+                    itemDiv.appendChild(textDiv);
+                    itemDiv.appendChild(actionsDiv);
+                    groupDiv.appendChild(itemDiv);
+                });
+                credListContainer.appendChild(groupDiv);
+            }
+        }
+
+        // --- Structured Loot Logic ---
+        function addLoot() {
+            const type = lootTypeSelect.value;
+            const title = lootTitleInput.value.trim() || 'Untitled';
+            const content = lootContentInput.value.trim();
+            
+            if (!content) return;
+            recordState(); 
+
+            const id = Date.now().toString() + Math.floor(Math.random() * 1000).toString();
+            lootArray.push({ id, type, title, content });
+            
+            lootTitleInput.value = '';
+            lootContentInput.value = '';
+            
+            renderLoot();
+            saveState();
+        }
+
+        function editLoot(id) {
+            const loot = lootArray.find(c => c.id === id);
+            if (!loot) return;
+            
+            lootTypeSelect.value = loot.type;
+            lootTitleInput.value = loot.title;
+            lootContentInput.value = loot.content;
+            
+            recordState();
+            lootArray = lootArray.filter(c => c.id !== id);
+            renderLoot();
+            saveState();
+        }
+
+        function removeLoot(id, skipConfirm = false) {
+            if (!skipConfirm && !confirm("Are you sure you want to delete this loot item?")) return;
+            recordState(); 
+            lootArray = lootArray.filter(c => c.id !== id);
+            renderLoot();
+            saveState();
+        }
+
+        function renderLoot() {
+            lootListContainer.innerHTML = '';
+            if (lootArray.length === 0) {
+                lootListContainer.innerHTML = '<div class="text-xs text-slate-500 italic text-center mt-2">No structured notes added yet.</div>';
+                return;
+            }
+
+            lootArray.forEach(loot => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'data-item';
+                
+                const typeIcon = lootTypeSelect.querySelector(`option[value="${loot.type}"]`)?.textContent.split(' ')[0] || '📝';
+                
+                const textDiv = document.createElement('div');
+                textDiv.className = 'flex flex-col gap-1';
+                textDiv.innerHTML = `
+                    <div class="text-[0.65rem] font-bold text-yellow-500 border-b border-slate-700 pb-1">${typeIcon} ${loot.type.toUpperCase()}: ${escapeHtml(loot.title)}</div>
+                    <div class="text-xs text-slate-300 whitespace-pre-wrap break-words mt-1">${escapeHtml(loot.content)}</div>
+                `;
+
+                const actionsDiv = document.createElement('div');
+                actionsDiv.className = 'flex gap-1 mt-2 justify-end';
+                
+                const copyBtn = document.createElement('button');
+                copyBtn.className = 'bg-slate-700 hover:bg-slate-600 text-slate-300 rounded px-2 py-1 text-[0.6rem] transition-colors';
+                copyBtn.textContent = '📋 Copy';
+                copyBtn.onclick = () => {
+                    copyToClipboard(`${loot.title}:\n${loot.content}`);
+                };
+                
+                const editBtn = document.createElement('button');
+                editBtn.className = 'bg-slate-700 hover:bg-blue-600 text-slate-300 rounded px-2 py-1 text-[0.6rem] transition-colors';
+                editBtn.textContent = '✏️';
+                editBtn.onclick = () => editLoot(loot.id);
+
+                const delBtn = document.createElement('button');
+                delBtn.className = 'bg-slate-700 hover:bg-red-900 text-slate-300 rounded px-2 py-1 text-[0.6rem] transition-colors';
+                delBtn.textContent = '🗑️';
+                delBtn.onclick = () => removeLoot(loot.id);
+
+                actionsDiv.appendChild(copyBtn);
+                actionsDiv.appendChild(editBtn);
+                actionsDiv.appendChild(delBtn);
+
+                itemDiv.appendChild(textDiv);
+                itemDiv.appendChild(actionsDiv);
+                lootListContainer.appendChild(itemDiv);
+            });
+        }
+
+
+        // --- Undo / Redo Logic ---
+        function recordState() {
+            historyStack.push({
+                nodes: nodes.get(),
+                edges: edges.get(),
+                credentials: JSON.parse(JSON.stringify(credentialsArray)),
+                loot: JSON.parse(JSON.stringify(lootArray))
+            });
+            if (historyStack.length > 30) historyStack.shift(); 
+            redoStack = [];
+            updateUndoRedoUI();
+        }
+
+        function updateUndoRedoUI() {
+            document.getElementById('btnUndo').disabled = historyStack.length === 0;
+            document.getElementById('btnRedo').disabled = redoStack.length === 0;
+        }
+
+        window.undo = function() {
+            if (historyStack.length === 0) return;
+            redoStack.push({ 
+                nodes: nodes.get(), 
+                edges: edges.get(),
+                credentials: JSON.parse(JSON.stringify(credentialsArray)),
+                loot: JSON.parse(JSON.stringify(lootArray))
+            });
+            const prevState = historyStack.pop();
+            
+            nodes.clear(); edges.clear();
+            nodes.add(prevState.nodes); edges.add(prevState.edges);
+            credentialsArray = JSON.parse(JSON.stringify(prevState.credentials || []));
+            lootArray = JSON.parse(JSON.stringify(prevState.loot || []));
+            
+            renderCredentials();
+            renderLoot();
+            saveState();
+            updateUndoRedoUI();
+            logMsg("Undo performed");
+        }
+
+        window.redo = function() {
+            if (redoStack.length === 0) return;
+            historyStack.push({ 
+                nodes: nodes.get(), 
+                edges: edges.get(),
+                credentials: JSON.parse(JSON.stringify(credentialsArray)),
+                loot: JSON.parse(JSON.stringify(lootArray))
+            });
+            const nextState = redoStack.pop();
+            
+            nodes.clear(); edges.clear();
+            nodes.add(nextState.nodes); edges.add(nextState.edges);
+            credentialsArray = JSON.parse(JSON.stringify(nextState.credentials || []));
+            lootArray = JSON.parse(JSON.stringify(nextState.loot || []));
+            
+            renderCredentials();
+            renderLoot();
+            saveState();
+            updateUndoRedoUI();
+            logMsg("Redo performed");
+        }
+
+        // --- Sidebar Logic ---
+        window.toggleSidebar = function() {
+            isSidebarOpen = !isSidebarOpen;
+            if (isSidebarOpen) {
+                sidebar.style.width = '340px';
+                sidebarToggleBtn.innerHTML = '◀';
+            } else {
+                sidebar.style.width = '0px';
+                sidebarToggleBtn.innerHTML = '▶';
+            }
+        };
+
+        // --- Graph Middle Click Pan & Tooltip Hover Logic ---
+        let isMiddleDown = false;
+        let lastPanPos = {x: 0, y: 0};
+        
+        container.addEventListener('mousedown', (e) => {
+            if (e.button === 1) { 
+                e.preventDefault();
+                isMiddleDown = true;
+                lastPanPos = {x: e.clientX, y: e.clientY};
+                container.style.cursor = 'grabbing';
+            }
+        });
+
+        container.addEventListener('mousemove', (e) => {
+            if (isMiddleDown && network) {
+                const dx = e.clientX - lastPanPos.x;
+                const dy = e.clientY - lastPanPos.y;
+                const currentView = network.getViewPosition();
+                const scale = network.getScale();
+                network.moveTo({
+                    position: { x: currentView.x - dx / scale, y: currentView.y - dy / scale },
+                    animation: false
+                });
+                lastPanPos = {x: e.clientX, y: e.clientY};
+                return; 
+            }
+
+            if (!network) return;
+            
+            const domPos = { x: e.clientX, y: e.clientY };
+            const rect = container.getBoundingClientRect();
+            const relX = domPos.x - rect.left;
+            const relY = domPos.y - rect.top;
+
+            const nodeId = network.getNodeAt({x: relX, y: relY});
+            
+            if (nodeId && !isLinkingMode) {
+                const node = nodes.get(nodeId);
+                const box = network.getBoundingBox(nodeId);
+                const canvasPos = network.DOMtoCanvas({x: relX, y: relY});
+                
+                const hasData = (node.command && node.command.trim() !== '') || 
+                                (node.output && node.output.trim() !== '') || 
+                                (node.note && node.note.trim() !== '');
+
+                // Hover strictly top-right corner 
+                if (hasData && canvasPos.x > box.right - 55 && canvasPos.y < box.top + 35) {
+                    container.style.cursor = 'help';
+                    showCustomTooltip(domPos.x, domPos.y, node);
+                } else {
+                    container.style.cursor = 'default';
+                    hideCustomTooltip();
+                }
+            } else {
+                container.style.cursor = isLinkingMode ? 'crosshair' : 'default';
+                hideCustomTooltip();
+            }
+        });
+
+        window.addEventListener('mouseup', (e) => {
+            if (e.button === 1) {
+                isMiddleDown = false;
+                container.style.cursor = 'default';
+            }
+        });
+
+        function showCustomTooltip(x, y, node) {
+            let html = '';
+            
+            if (node.command && node.command.trim() !== '') {
+                html += `<div class="tooltip-section">
+                            <span class="tooltip-title">💻 Command</span>
+                            <div class="tooltip-content">${escapeHtml(node.command)}</div>
+                         </div>`;
+            }
+            if (node.output && node.output.trim() !== '') {
+                html += `<div class="tooltip-section mt-1">
+                            <span class="tooltip-title">🔎 Output</span>
+                            <div class="tooltip-content out">${escapeHtml(node.output)}</div>
+                         </div>`;
+            }
+            if (node.note && node.note.trim() !== '') {
+                html += `<div class="tooltip-section mt-1">
+                            <span class="tooltip-title">📝 Note</span>
+                            <div class="tooltip-content note">${escapeHtml(node.note)}</div>
+                         </div>`;
+            }
+
+            customHoverTooltip.innerHTML = html;
+            customHoverTooltip.style.display = 'flex';
+            
+            const tRect = customHoverTooltip.getBoundingClientRect();
+            const wWidth = window.innerWidth;
+            const wHeight = window.innerHeight;
+            
+            let finX = x;
+            let finY = y;
+            
+            if (x + tRect.width + 20 > wWidth) finX = x - tRect.width - 20;
+            if (y + tRect.height + 20 > wHeight) finY = y - tRect.height - 20;
+
+            customHoverTooltip.style.left = finX + 'px';
+            customHoverTooltip.style.top = finY + 'px';
+        }
+
+        function hideCustomTooltip() {
+            customHoverTooltip.style.display = 'none';
+        }
+
+        function escapeHtml(unsafe) {
+            if (!unsafe) return '';
+            return unsafe
+                 .replace(/&/g, "&amp;")
+                 .replace(/</g, "&lt;")
+                 .replace(/>/g, "&gt;")
+                 .replace(/"/g, "&quot;")
+                 .replace(/'/g, "&#039;");
+        }
+
+        // --- Graph Layout & Auto Arrange Logic (BFS based) ---
+        window.centerGraph = function() {
+            network.fit({ animation: { duration: 500, easingFunction: 'easeInOutQuad' } });
+            logMsg("Graph centered");
+        }
+
+        window.autoArrangeGraph = function() {
+            try {
+                recordState();
+                logMsg("Starting Auto Arrange (BFS)");
+                
+                const allNodes = nodes.get();
+                const allEdges = edges.get();
+                const roots = allNodes.filter(n => !allEdges.find(e => e.to === n.id));
+                
+                let queue = roots.map(r => ({ id: r.id, level: 0 }));
+                let visited = new Map();
+                
+                let sanityCounter = 0;
+                while(queue.length > 0) {
+                    sanityCounter++;
+                    if(sanityCounter > 5000) {
+                        logMsg("Auto Arrange aborted: cyclic complexity too high", "ERROR");
+                        break;
+                    }
+                    
+                    let curr = queue.shift();
+                    if (visited.has(curr.id) && visited.get(curr.id) >= curr.level) continue; 
+                    visited.set(curr.id, curr.level);
+                    
+                    let children = allEdges.filter(e => e.from === curr.id).map(e => e.to);
+                    children.forEach(childId => {
+                        queue.push({ id: childId, level: curr.level + 1 });
+                    });
+                }
+                
+                let updates = [];
+                allNodes.forEach(n => {
+                    updates.push({ 
+                        id: n.id, 
+                        level: visited.has(n.id) ? visited.get(n.id) : 0, 
+                        x: undefined, 
+                        y: undefined 
+                    });
+                });
+
+                network.setOptions({ physics: { enabled: true, hierarchicalRepulsion: { avoidOverlap: 1, nodeDistance: 250 } } });
+                nodes.update(updates);
+                network.setData({ nodes: nodes, edges: edges });
+                
+                setTimeout(() => {
+                    network.setOptions({ physics: { enabled: false } });
+                    network.fit({ animation: { duration: 600, easingFunction: 'easeInOutQuad' } });
+                    logMsg("Auto Arrange completed");
+                }, 800);
+            } catch (e) {
+                logMsg(`Auto Arrange Failed: ${e.message}`, "ERROR");
+            }
+        }
+
+        phaseBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                phaseBtns.forEach(b => b.classList.remove('selected'));
+                e.target.classList.add('selected');
+                selectedPhase = e.target.getAttribute('data-phase');
+                floatingInput.focus();
+            });
+        });
+
+        function setPhaseSelection(phase) {
+            selectedPhase = phase || 'none';
+            phaseBtns.forEach(b => {
+                b.classList.toggle('selected', b.getAttribute('data-phase') === selectedPhase);
+            });
+        }
+
+        // Display Icons Logic
+        function getDisplayLabel(rawLabel, phaseKey, cmd, out, note) {
+            const phase = currentPhases[phaseKey] || currentPhases.none;
+            let display = phase.tag ? `${phase.tag}` : '';
+            if ((cmd && cmd.trim() !== '') || (out && out.trim() !== '')) display += ' 💻'; 
+            if (note && note.trim() !== '') display += ' 📝';
+            display += display ? `\n${rawLabel}` : rawLabel;
+            return display;
+        }
+
+        function createNodeObject(id, label, phaseKey, command = '', output = '', note = '', level = 0) {
+            const phase = currentPhases[phaseKey] || currentPhases.none;
+            return {
+                id: id,
+                label: getDisplayLabel(label, phaseKey, command, output, note),
+                rawLabel: label,
+                phase: phaseKey,
+                command: command,
+                output: output,
+                note: note,
+                level: level, 
+                shape: 'box',
+                color: {
+                    background: phase.bg,
+                    border: phase.border,
+                    highlight: { background: phase.bg, border: '#ffffff' }
+                },
+                font: { color: phase.font, face: 'Inter, sans-serif', size: 14, multi: true, bold: {color: phase.font} },
+                borderWidth: 2,
+                margin: { top: 12, right: 18, bottom: 12, left: 18 }, 
+                shadow: { enabled: true, color: 'rgba(0,0,0,0.8)', size: 10, x: 2, y: 4 }
+            };
+        }
+
+        function updateAllNodesColor() {
+            const updates = nodes.get().map(n => {
+                const phase = currentPhases[n.phase] || currentPhases.none;
+                return {
+                    id: n.id,
+                    color: {
+                        background: phase.bg,
+                        border: phase.border,
+                        highlight: { background: phase.bg, border: '#ffffff' }
+                    },
+                    font: { color: phase.font, face: 'Inter, sans-serif', size: 14, multi: true, bold: {color: phase.font} }
+                };
+            });
+            nodes.update(updates);
+        }
+
+        function initGraph() {
+            const visData = { nodes: nodes, edges: edges };
+            const options = {
+                layout: {
+                    hierarchical: { 
+                        direction: 'UD', 
+                        sortMethod: 'directed', 
+                        shakeTowards: 'roots', 
+                        nodeSpacing: 280,
+                        levelSeparation: 200,
+                        treeSpacing: 250,
+                        parentCentralization: true
+                    }
+                },
+                physics: { enabled: false }, 
+                edges: {
+                    smooth: { type: 'cubicBezier', forceDirection: 'vertical', roundness: 0.5 },
+                    color: { color: '#475569', highlight: '#94a3b8' }, 
+                    width: 2, 
+                    arrows: { to: { enabled: true, scaleFactor: 0.8 } },
+                    selectionWidth: 3
+                },
+                interaction: { 
+                    dragNodes: true, 
+                    zoomView: true, 
+                    dragView: true, 
+                    hover: false
+                }
+            };
+
+            try {
+                network = new vis.Network(container, visData, options);
+                logMsg("Network Graph Initialized");
+            } catch (e) {
+                logMsg(`Failed to init graph: ${e.message}`, "ERROR");
+            }
+            
+            network.on("click", function (params) {
+                if (isLinkingMode) {
+                    if (params.nodes.length > 0) {
+                        const targetId = params.nodes[0];
+                        if (targetId !== linkingSourceId) {
+                            recordState();
+                            edges.add({ from: linkingSourceId, to: targetId });
+                            saveState();
+                            logMsg(`Linked node ${linkingSourceId} to ${targetId}`);
+                        }
+                    }
+                    cancelLinkingMode();
+                    return;
+                }
+                closeAllMenus();
+            });
+
+            network.on("dragStart", () => { closeAllMenus(); hideCustomTooltip(); });
+            network.on("zoom", () => { closeAllMenus(); hideCustomTooltip(); });
+
+            network.on("doubleClick", function (params) {
+                if (isLinkingMode) return;
+                closeAllMenus();
+                if (params.nodes.length > 0) {
+                    contextNodeId = params.nodes[0];
+                    showFloatingInput(params.pointer.DOM.x, params.pointer.DOM.y, 'edit');
+                }
+            });
+
+            network.on("oncontext", function (params) {
+                if (isLinkingMode) {
+                    cancelLinkingMode();
+                    return;
+                }
+                params.event.preventDefault();
+                closeAllMenus();
+                
+                const nodeId = network.getNodeAt(params.pointer.DOM);
+                const edgeId = network.getEdgeAt(params.pointer.DOM);
+
+                if (nodeId) {
+                    contextNodeId = nodeId;
+                    contextEdgeId = null;
+                    lastClickPosition = params.pointer.DOM;
+                    showContextMenu(params.pointer.DOM.x, params.pointer.DOM.y);
+                } else if (edgeId) {
+                    contextEdgeId = edgeId;
+                    contextNodeId = null;
+                    showEdgeContextMenu(params.pointer.DOM.x, params.pointer.DOM.y);
+                } else {
+                    contextNodeId = null;
+                    contextEdgeId = null;
+                    lastClickPosition = params.pointer.DOM;
+                    showContextMenu(params.pointer.DOM.x, params.pointer.DOM.y);
+                }
+            });
+        }
+
+        function closeAllMenus() {
+            contextMenu.style.display = 'none';
+            edgeContextMenu.style.display = 'none';
+            if(floatingInputContainer.style.display !== 'none') {
+                floatingInputContainer.style.display = 'none';
+                currentAction = null;
+            }
+        }
+
+        function showContextMenu(x, y) {
+            contextMenu.style.display = 'block';
+            const rect = graphArea.getBoundingClientRect();
+            if (x + contextMenu.offsetWidth > rect.width) x = rect.width - contextMenu.offsetWidth;
+            if (y + contextMenu.offsetHeight > rect.height) y = rect.height - contextMenu.offsetHeight;
+            
+            contextMenu.style.left = x + 'px';
+            contextMenu.style.top = y + 'px';
+
+            const hasNode = contextNodeId !== null;
+            document.getElementById('menuAddChild').style.display = hasNode ? 'flex' : 'none';
+            document.getElementById('menuAddBulk').style.display = hasNode ? 'flex' : 'none';
+            document.getElementById('menuLinkNode').style.display = hasNode ? 'flex' : 'none';
+            document.getElementById('menuEdit').style.display = hasNode ? 'flex' : 'none';
+            document.getElementById('menuDeleteSingle').style.display = hasNode ? 'flex' : 'none';
+            document.getElementById('menuDeleteCascade').style.display = hasNode ? 'flex' : 'none';
+            document.getElementById('menuViewData').style.display = hasNode ? 'flex' : 'none';
+            document.getElementById('menuAddRoot').style.display = hasNode ? 'none' : 'flex';
+        }
+
+        function showEdgeContextMenu(x, y) {
+            edgeContextMenu.style.display = 'block';
+            const rect = graphArea.getBoundingClientRect();
+            if (x + edgeContextMenu.offsetWidth > rect.width) x = rect.width - edgeContextMenu.offsetWidth;
+            if (y + edgeContextMenu.offsetHeight > rect.height) y = rect.height - edgeContextMenu.offsetHeight;
+            
+            edgeContextMenu.style.left = x + 'px';
+            edgeContextMenu.style.top = y + 'px';
+        }
+
+        window.handleMenuAction = function(action) {
+            contextMenu.style.display = 'none';
+            if (action === 'deleteSingle') {
+                deleteSingleNode();
+            } else if (action === 'deleteCascade') {
+                deleteSelectedNode();
+            } else if (action === 'viewData') {
+                openNodeDataModal();
+            } else if (action === 'linkNode') {
+                isLinkingMode = true;
+                linkingSourceId = contextNodeId;
+                linkingBanner.style.display = 'flex';
+                linkingSourceName.textContent = nodes.get(contextNodeId).rawLabel;
+                container.style.cursor = 'crosshair';
+            } else if (action === 'addBulk') {
+                openBulkAddModal();
+            } else {
+                showFloatingInput(lastClickPosition.x, lastClickPosition.y, action);
+            }
+        };
+
+        window.deleteSelectedEdge = function() {
+            edgeContextMenu.style.display = 'none';
+            if (contextEdgeId === null) return;
+            if (!confirm("Disconnect this vector?")) return;
+            recordState();
+            edges.remove(contextEdgeId);
+            contextEdgeId = null;
+            saveState();
+            logMsg("Edge removed");
+        }
+
+        function cancelLinkingMode() {
+            isLinkingMode = false;
+            linkingSourceId = null;
+            linkingBanner.style.display = 'none';
+            container.style.cursor = 'default';
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && isLinkingMode) {
+                cancelLinkingMode();
+            }
+        });
+
+        // --- Stress Test Logic ---
+        window.runStressTest = function() {
+            if(!confirm("This will clear the board, generate 500 random nodes, and run a background performance test. Proceed?")) return;
+            recordState();
+            nodes.clear(); edges.clear();
+            
+            logMsg("--- STARTING STRESS TEST (500 NODES) ---");
+            
+            const newNodes = [];
+            const newEdges = [];
+            
+            const rootId = 'test_0';
+            newNodes.push(createNodeObject(rootId, 'Stress Root', 'recon', '', '', '', 0));
+            
+            const phasesKeys = Object.keys(currentPhases);
+            const numNodes = 500;
+            let successfulEdges = 0;
+            
+            for(let i=1; i<numNodes; i++) {
+                const id = 'test_' + i;
+                const parentIdx = Math.floor(Math.random() * i); 
+                const parentId = 'test_' + parentIdx;
+                const parentNode = newNodes[parentIdx];
+                const level = parentNode.level + 1;
+                const phase = phasesKeys[Math.floor(Math.random() * (phasesKeys.length-1))]; 
+                
+                newNodes.push(createNodeObject(id, 'Node ' + i, phase, '', '', '', level));
+                newEdges.push({ from: parentId, to: id });
+                successfulEdges++;
+            }
+            
+            const startTime = performance.now();
+            nodes.add(newNodes);
+            edges.add(newEdges);
+            const endTime = performance.now();
+            
+            logMsg(`Generated ${newNodes.length} nodes and ${successfulEdges} edges in ${(endTime - startTime).toFixed(2)}ms.`);
+            
+            let integrityCheck = (nodes.length === numNodes && edges.length === successfulEdges);
+            logMsg(`Data Integrity Check: ${integrityCheck ? "PASSED" : "FAILED"}`);
+            
+            setTimeout(() => {
+                const arrangeStart = performance.now();
+                autoArrangeGraph();
+                const arrangeEnd = performance.now();
+                logMsg(`Auto Arrange calculation completed in ${(arrangeEnd - arrangeStart).toFixed(2)}ms.`);
+                logMsg("--- STRESS TEST COMPLETED ---");
+            }, 200);
+        }
+
+        // --- Bulk Add Modal Logic ---
+        function openBulkAddModal() {
+            if (contextNodeId === null) return;
+            bulkAddInput.value = '';
+            bulkAddModal.style.display = 'flex';
+            setTimeout(() => bulkAddInput.focus(), 50);
+        }
+
+        window.closeBulkAddModal = function() {
+            bulkAddModal.style.display = 'none';
+        }
+
+        window.saveBulkAddModal = function() {
+            if (contextNodeId === null) return;
+            const txt = bulkAddInput.value;
+            if (txt.trim() === '') { closeBulkAddModal(); return; }
+            recordState();
+            parseBulkTextToChildren(txt, contextNodeId);
+            saveState();
+            closeBulkAddModal();
+        }
+
+        function parseBulkTextToChildren(txt, parentId) {
+            try {
+                const lines = txt.split('\n');
+                let lastNodeId = null;
+                let addedCount = 0;
+                let parentLvl = nodes.get(parentId).level || 0;
+
+                lines.forEach(line => {
+                    if (line.trim() === '') return;
+
+                    const cmdMatch = line.match(/^\s*> CMD:\s*`(.*)`\s*$/);
+                    if (cmdMatch && lastNodeId) {
+                        const node = nodes.get(lastNodeId);
+                        node.command = cmdMatch[1].replace(/\\n/g, '\n').replace(/\\`/g, '`');
+                        node.label = getDisplayLabel(node.rawLabel, node.phase, node.command, node.output, node.note);
+                        nodes.update(node); return;
+                    }
+
+                    const outMatch = line.match(/^\s*> OUT:\s*`(.*)`\s*$/);
+                    if (outMatch && lastNodeId) {
+                        const node = nodes.get(lastNodeId);
+                        node.output = outMatch[1].replace(/\\n/g, '\n').replace(/\\`/g, '`');
+                        node.label = getDisplayLabel(node.rawLabel, node.phase, node.command, node.output, node.note);
+                        nodes.update(node); return;
+                    }
+
+                    const noteMatch = line.match(/^\s*> NOTE:\s*`(.*)`\s*$/);
+                    if (noteMatch && lastNodeId) {
+                        const node = nodes.get(lastNodeId);
+                        node.note = noteMatch[1].replace(/\\n/g, '\n').replace(/\\`/g, '`');
+                        node.label = getDisplayLabel(node.rawLabel, node.phase, node.command, node.output, node.note);
+                        nodes.update(node); return;
+                    }
+
+                    const nodeMatch = line.match(/^\s*\*\s+(.*)$/);
+                    if (nodeMatch) {
+                        let labelText = nodeMatch[1].trim();
+                        let phaseMatch = labelText.match(/ \{(.+)\}$/);
+                        let phase = 'none';
+                        if (phaseMatch) {
+                            phase = phaseMatch[1];
+                            labelText = labelText.replace(phaseMatch[0], '');
+                        }
+
+                        const newId = generateId();
+                        nodes.add(createNodeObject(newId, labelText, phase, '', '', '', parentLvl + 1));
+                        edges.add({ from: parentId, to: newId });
+                        lastNodeId = newId;
+                        addedCount++;
+                    }
+                });
+                logMsg(`Bulk added ${addedCount} nodes`);
+                setTimeout(autoArrangeGraph, 200);
+            } catch (e) {
+                logMsg(`Bulk Add Parsing Error: ${e.message}`, 'ERROR');
+            }
+        }
+
+        // --- Data Modal Logic ---
+        function openNodeDataModal() {
+            if (contextNodeId === null) return;
+            const node = nodes.get(contextNodeId);
+            dataModalTitle.textContent = "Data for: " + node.rawLabel;
+            nodeCommandInput.value = node.command || '';
+            nodeOutputInput.value = node.output || '';
+            nodeNoteInput.value = node.note || '';
+            nodeDataModal.style.display = 'flex';
+        }
+
+        window.closeNodeDataModal = function() {
+            nodeDataModal.style.display = 'none';
+        }
+
+        window.saveNodeDataModal = function() {
+            if (contextNodeId === null) return;
+            recordState();
+            const node = nodes.get(contextNodeId);
+            const newCmd = nodeCommandInput.value;
+            const newOut = nodeOutputInput.value;
+            const newNote = nodeNoteInput.value;
+            
+            nodes.update(createNodeObject(contextNodeId, node.rawLabel, node.phase, newCmd, newOut, newNote, node.level));
+            saveState();
+            closeNodeDataModal();
+            logMsg(`Updated data for node ${contextNodeId}`);
+        }
+
+        // --- Quick Floating Input Logic ---
+        function showFloatingInput(x, y, action) {
+            currentAction = action;
+            floatingInputContainer.style.display = 'block';
+            
+            const rect = graphArea.getBoundingClientRect();
+            if (x + 340 > rect.width) x = rect.width - 360;
+            if (y + floatingInputContainer.offsetHeight > rect.height) y = rect.height - floatingInputContainer.offsetHeight - 20;
+            
+            floatingInputContainer.style.left = x + 'px';
+            floatingInputContainer.style.top = y + 'px';
+            
+            if (action === 'edit' && contextNodeId !== null) {
+                const node = nodes.get(contextNodeId);
+                floatingInput.value = node.rawLabel || node.label;
+                setPhaseSelection(node.phase || 'none');
+            } else {
+                floatingInput.value = '';
+                if (action === 'addChild' && contextNodeId !== null) {
+                    setPhaseSelection(nodes.get(contextNodeId).phase || 'none');
+                } else {
+                    setPhaseSelection('none');
+                }
+            }
+            setTimeout(() => floatingInput.focus(), 50);
+        }
+
+        window.submitFloatingInput = function() {
+            const text = floatingInput.value.trim();
+            if (text) {
+                processInput(text);
+            }
+            floatingInputContainer.style.display = 'none';
+        }
+
+        floatingInputContainer.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                submitFloatingInput();
+            } else if (e.key === 'Escape') {
+                floatingInputContainer.style.display = 'none';
+                currentAction = null;
+            }
+        });
+
+        function processInput(inputText) {
+            try {
+                recordState();
+                const labels = inputText.split(',').map(s => s.trim()).filter(s => s);
+                
+                if (currentAction === 'edit' && contextNodeId !== null) {
+                    const node = nodes.get(contextNodeId);
+                    nodes.update(createNodeObject(contextNodeId, labels[0], selectedPhase, node.command, node.output, node.note, node.level));
+                    logMsg(`Edited node ${contextNodeId}`);
+                } else if (currentAction === 'addChild' && contextNodeId !== null) {
+                    let parentLvl = nodes.get(contextNodeId).level || 0;
+                    labels.forEach(label => {
+                        const newId = generateId();
+                        nodes.add(createNodeObject(newId, label, selectedPhase, '', '', '', parentLvl + 1));
+                        edges.add({ from: contextNodeId, to: newId });
+                    });
+                    logMsg(`Added child nodes to ${contextNodeId}`);
+                } else if (currentAction === 'addRoot') {
+                    labels.forEach(label => {
+                        const newId = generateId();
+                        nodes.add(createNodeObject(newId, label, selectedPhase, '', '', '', 0));
+                    });
+                    logMsg("Added new root nodes");
+                }
+                saveState();
+                currentAction = null;
+                setTimeout(autoArrangeGraph, 50);
+            } catch (e) {
+                logMsg(`Error in processInput: ${e.message}`, "ERROR");
+            }
+        }
+
+        function generateId() { return Date.now().toString() + Math.floor(Math.random() * 1000).toString(); }
+
+        function deleteSingleNode() {
+            if (contextNodeId === null) return;
+            if (!confirm("Are you sure you want to delete this node? (Children will be kept)")) return;
+            recordState();
+            
+            const connectedEdges = network.getConnectedEdges(contextNodeId);
+            edges.remove(connectedEdges);
+            nodes.remove(contextNodeId);
+            
+            contextNodeId = null;
+            saveState();
+            logMsg("Deleted single node");
+        }
+
+        function deleteSelectedNode() {
+            if (contextNodeId === null) return;
+            if (!confirm("Are you sure you want to delete this node and ALL its descendants?")) return;
+            recordState();
+
+            function getDescendants(nodeId, descList = []) {
+                const connectedEdges = edges.get({ filter: e => e.from === nodeId });
+                connectedEdges.forEach(e => { descList.push(e.to); getDescendants(e.to, descList); });
+                return descList;
+            }
+            
+            const toDelete = getDescendants(contextNodeId);
+            toDelete.push(contextNodeId);
+            
+            toDelete.forEach(id => {
+                const connectedEdges = network.getConnectedEdges(id);
+                edges.remove(connectedEdges);
+                nodes.remove(id);
+            });
+            contextNodeId = null;
+            saveState();
+            logMsg("Deleted node and descendants cascade");
+        }
+
+        // --- Visual Export Modals ---
+        window.openVisualExportModal = function(format) {
+            currentVisualExportFormat = format;
+            if (format === 'png') {
+                visualExportTitle.textContent = "🖼️ Export PNG Snapshot";
+                visualExportTitle.className = "font-bold text-lg text-orange-400";
+            } else {
+                visualExportTitle.textContent = "🗺️ Export SVG Snapshot";
+                visualExportTitle.className = "font-bold text-lg text-pink-400";
+            }
+            visualExportModal.style.display = 'flex';
+        }
+
+        window.closeVisualExportModal = function() {
+            visualExportModal.style.display = 'none';
+        }
+
+        window.processVisualExport = function(themeMode) {
+            closeVisualExportModal();
+            if (currentVisualExportFormat === 'png') {
+                generatePNG(themeMode);
+            } else {
+                generateSVG(themeMode);
+            }
+        }
+
+        // --- Export PNG Logic ---
+        window.generatePNG = function(themeMode) {
+            const btn = document.getElementById('btnExportImage');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '⏳...';
+            btn.disabled = true;
+            logMsg(`Generating Export Image in ${themeMode} mode`);
+
+            const scale = network.getScale();
+            const position = network.getViewPosition();
+
+            const originalPhases = currentPhases;
+            currentPhases = themeMode === 'light' ? phasesLight : phasesDark;
+            updateAllNodesColor();
+            
+            const edgeColor = themeMode === 'light' ? '#94a3b8' : '#475569';
+            network.setOptions({ edges: { color: { color: edgeColor } } });
+
+            network.fit({ animation: false });
+
+            setTimeout(() => {
+                const networkCanvas = container.getElementsByTagName('canvas')[0];
+                if (networkCanvas) {
+                    const tempCanvas = document.createElement('canvas');
+                    tempCanvas.width = networkCanvas.width;
+                    tempCanvas.height = networkCanvas.height;
+                    const ctx = tempCanvas.getContext('2d');
+                    
+                    ctx.fillStyle = themeMode === 'light' ? '#ffffff' : '#0b0f19';
+                    ctx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+                    ctx.drawImage(networkCanvas, 0, 0);
+                    
+                    const a = document.createElement('a');
+                    a.href = tempCanvas.toDataURL('image/png');
+                    const filename = ctfNameInput.value ? ctfNameInput.value.replace(/[^a-z0-9]/gi, '_').toLowerCase() : 'CTF_Graph';
+                    a.download = `${filename}_${themeMode}_${new Date().toISOString().split('T')[0]}.png`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    logMsg("Image downloaded successfully");
+                }
+
+                currentPhases = originalPhases;
+                updateAllNodesColor();
+                network.setOptions({ edges: { color: { color: '#475569' } } }); 
+                network.moveTo({ position: position, scale: scale, animation: false });
+
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }, 500);
+        };
+
+        // --- Export SVG Logic ---
+        function getSvgWrappedText(text, x, y, maxWidth, fontSize, color, isBold=false) {
+            if (!text) return { svg: '', height: 0 };
+            let words = text.replace(/\n/g, ' \n ').split(' '); 
+            let lines = [];
+            let currentLine = '';
+            let charWidthEst = fontSize * 0.6; 
+            
+            for(let word of words) {
+                if (word === '\n') {
+                    lines.push(currentLine);
+                    currentLine = '';
+                    continue;
+                }
+                let testLine = currentLine + word + ' ';
+                if (testLine.length * charWidthEst > maxWidth && currentLine !== '') {
+                    lines.push(currentLine);
+                    currentLine = word + ' ';
+                } else {
+                    currentLine = testLine;
+                }
+            }
+            if(currentLine) lines.push(currentLine);
+            
+            let svgStr = '';
+            let fw = isBold ? 'bold' : 'normal';
+            lines.forEach((line, i) => {
+                svgStr += `<text x="${x}" y="${y + (i * fontSize * 1.4)}" fill="${color}" font-family="Inter, monospace, sans-serif" font-size="${fontSize}" font-weight="${fw}">${escapeHtml(line.trim())}</text>`;
+            });
+            return { svg: svgStr, height: lines.length * fontSize * 1.4 };
+        }
+
+        window.generateSVG = function(themeMode) {
+            logMsg(`Generating full SVG snapshot in ${themeMode} mode`);
+
+            const t = themeMode === 'light' ? {
+                bgFull: '#ffffff',
+                bgSidebar: '#f8fafc',
+                textMain: '#0f172a',
+                textMuted: '#64748b',
+                border: '#cbd5e1',
+                cardBg: '#ffffff',
+                accent: '#3b82f6',
+                edgeColor: '#94a3b8'
+            } : {
+                bgFull: '#0b0f19',
+                bgSidebar: '#0f172a',
+                textMain: '#e2e8f0',
+                textMuted: '#94a3b8',
+                border: '#334155',
+                cardBg: '#1e293b',
+                accent: '#10b981',
+                edgeColor: '#475569'
+            };
+
+            const tPhases = themeMode === 'light' ? phasesLight : phasesDark;
+
+            // 1. Estimate Sidebar Height
+            let sideSvg = '';
+            let currY = 40;
+            const sideX = 20;
+            const maxW = 300;
+            const sideBarW = 360;
+            
+            sideSvg += `<rect x="0" y="0" width="${sideBarW}" height="100%" fill="${t.bgSidebar}" stroke="${t.border}" stroke-width="2"/>`;
+
+            sideSvg += `<text x="${sideX}" y="${currY}" fill="${t.accent}" font-family="Inter, sans-serif" font-size="24" font-weight="900">CTF BOARD SNAPSHOT</text>`;
+            currY += 40;
+            
+            sideSvg += `<rect x="${sideX}" y="${currY-15}" width="${maxW}" height="30" rx="4" fill="${t.cardBg}" stroke="${t.border}" />`;
+            sideSvg += `<text x="${sideX+10}" y="${currY+5}" fill="${t.textMain}" font-family="Inter, sans-serif" font-size="14" font-weight="bold">${escapeHtml(ctfNameInput.value || 'Unnamed CTF')}</text>`;
+            currY += 45;
+
+            sideSvg += `<text x="${sideX}" y="${currY}" fill="${t.textMuted}" font-family="Inter, sans-serif" font-size="11" font-weight="bold">TARGET &amp; IPS</text>`;
+            currY += 15;
+            let targetRes = getSvgWrappedText(targetNotes.value || 'None', sideX, currY, maxW, 12, t.textMain);
+            sideSvg += targetRes.svg;
+            currY += targetRes.height + 25;
+
+            sideSvg += `<text x="${sideX}" y="${currY}" fill="${t.textMuted}" font-family="Inter, sans-serif" font-size="11" font-weight="bold">CREDENTIALS</text>`;
+            currY += 15;
+            if(credentialsArray.length === 0) {
+                sideSvg += `<text x="${sideX}" y="${currY+10}" fill="${t.textMuted}" font-family="Inter, sans-serif" font-size="12">None</text>`;
+                currY += 30;
+            } else {
+                const grouped = credentialsArray.reduce((acc, cred) => {
+                    if (!acc[cred.service]) acc[cred.service] = [];
+                    acc[cred.service].push(cred);
+                    return acc;
+                }, {});
+
+                for (const [service, creds] of Object.entries(grouped)) {
+                    sideSvg += `<text x="${sideX}" y="${currY+10}" fill="${t.textMuted}" font-family="Inter, sans-serif" font-size="10" font-weight="bold">${escapeHtml(service.toUpperCase())}</text>`;
+                    sideSvg += `<line x1="${sideX}" y1="${currY+16}" x2="${sideX+maxW}" y2="${currY+16}" stroke="${t.border}" stroke-width="1" />`;
+                    currY += 24;
+
+                    creds.forEach(cred => {
+                        sideSvg += `<rect x="${sideX}" y="${currY}" width="${maxW}" height="38" rx="4" fill="${t.cardBg}" stroke="${t.border}" />`;
+                        sideSvg += `<text x="${sideX+10}" y="${currY+16}" fill="#10b981" font-family="Inter, sans-serif" font-size="11" font-weight="bold">U: ${escapeHtml(cred.user || '-')}</text>`;
+                        sideSvg += `<text x="${sideX+10}" y="${currY+30}" fill="#ef4444" font-family="Inter, sans-serif" font-size="11">P: ${escapeHtml(cred.pass || '-')}</text>`;
+                        currY += 46;
+                    });
+                    currY += 8;
+                }
+                currY += 10;
+            }
+
+            sideSvg += `<text x="${sideX}" y="${currY}" fill="${t.textMuted}" font-family="Inter, sans-serif" font-size="11" font-weight="bold">LOOT &amp; NOTES</text>`;
+            currY += 15;
+            if(lootArray.length === 0) {
+                sideSvg += `<text x="${sideX}" y="${currY+10}" fill="${t.textMuted}" font-family="Inter, sans-serif" font-size="12">None</text>`;
+                currY += 30;
+            } else {
+                lootArray.forEach(l => {
+                    let header = `[${l.type}] ${l.title}`;
+                    sideSvg += `<rect x="${sideX}" y="${currY}" width="${maxW}" height="20" rx="4" fill="${t.cardBg}" stroke="${t.border}" />`;
+                    sideSvg += `<text x="${sideX+10}" y="${currY+14}" fill="#eab308" font-family="Inter, sans-serif" font-size="11" font-weight="bold">${escapeHtml(header)}</text>`;
+                    currY += 25;
+                    let cRes = getSvgWrappedText(l.content, sideX+10, currY, maxW-20, 11, t.textMain);
+                    sideSvg += cRes.svg;
+                    currY += cRes.height + 15;
+                });
+            }
+            
+            const estimatedSidebarHeight = currY + 40;
+
+            // 2. Graph Dimensions
+            let graphMinX = Infinity, graphMinY = Infinity, graphMaxX = -Infinity, graphMaxY = -Infinity;
+            const nodePositions = network.getPositions();
+            const nodeIds = Object.keys(nodePositions);
+            
+            if (nodeIds.length > 0) {
+                nodeIds.forEach(id => {
+                    const box = network.getBoundingBox(id);
+                    graphMinX = Math.min(graphMinX, box.left);
+                    graphMinY = Math.min(graphMinY, box.top);
+                    graphMaxX = Math.max(graphMaxX, box.right);
+                    graphMaxY = Math.max(graphMaxY, box.bottom);
+                });
+            } else {
+                graphMinX = 0; graphMinY = 0; graphMaxX = 500; graphMaxY = 500;
+            }
+
+            const padding = 100;
+            const graphW = graphMaxX - graphMinX + (padding * 2);
+            const graphH = graphMaxY - graphMinY + (padding * 2);
+            
+            const totalW = sideBarW + graphW;
+            const totalH = Math.max(estimatedSidebarHeight, graphH);
+            
+            const shiftX = sideBarW + padding - graphMinX;
+            const shiftY = Math.max(padding, (totalH - (graphMaxY - graphMinY)) / 2 - graphMinY); 
+
+            // 3. Assemble Full SVG
+            let svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${totalW} ${totalH}" width="${totalW}" height="${totalH}">`;
+            
+            svg += `
+            <defs>
+                <marker id="arrowhead_${themeMode}" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                    <polygon points="0 0, 10 3.5, 0 7" fill="${t.edgeColor}" />
+                </marker>
+            </defs>`;
+            
+            svg += `<rect x="0" y="0" width="${totalW}" height="${totalH}" fill="${t.bgFull}" />`;
+            
+            // Fix sidebar background height to 100% of final calculated totalH
+            sideSvg = sideSvg.replace('height="100%"', `height="${totalH}"`);
+            svg += sideSvg;
+
+            edges.get().forEach(edge => {
+                const fromPos = nodePositions[edge.from];
+                const toPos = nodePositions[edge.to];
+                const toBox = network.getBoundingBox(edge.to);
+                const fromBox = network.getBoundingBox(edge.from);
+                
+                if(fromPos && toPos && toBox && fromBox) {
+                    const startX = fromPos.x + shiftX;
+                    const startY = fromBox.bottom + shiftY;
+                    const endX = toPos.x + shiftX;
+                    const endY = toBox.top + shiftY - 2; 
+                    
+                    const dy = endY - startY;
+                    const controlY1 = startY + dy * 0.5;
+                    const controlY2 = endY - dy * 0.5;
+                    
+                    svg += `<path d="M ${startX} ${startY} C ${startX} ${controlY1}, ${endX} ${controlY2}, ${endX} ${endY}" fill="none" stroke="${t.edgeColor}" stroke-width="2" marker-end="url(#arrowhead_${themeMode})" />`;
+                }
+            });
+
+            nodes.get().forEach(node => {
+                const pos = nodePositions[node.id];
+                const box = network.getBoundingBox(node.id);
+                if(!pos || !box) return;
+                
+                const nWidth = box.right - box.left;
+                const nHeight = box.bottom - box.top;
+                const nX = box.left + shiftX;
+                const nY = box.top + shiftY;
+                const pX = pos.x + shiftX;
+                
+                const phaseConfig = tPhases[node.phase] || tPhases.none;
+                
+                svg += `<rect x="${nX + 2}" y="${nY + 4}" width="${nWidth}" height="${nHeight}" rx="6" ry="6" fill="rgba(0,0,0,0.2)" />`;
+                svg += `<rect x="${nX}" y="${nY}" width="${nWidth}" height="${nHeight}" rx="6" ry="6" fill="${phaseConfig.bg}" stroke="${phaseConfig.border}" stroke-width="2" />`;
+                
+                const lines = node.label.split('\n');
+                const lineHeight = 16;
+                const totalTextHeight = lines.length * lineHeight;
+                const startY = nY + (nHeight - totalTextHeight) / 2 + 12; 
+                
+                lines.forEach((line, i) => {
+                    let isBold = i === 0 && line.startsWith('[');
+                    let fw = isBold ? 'bold' : 'normal';
+                    svg += `<text x="${pX}" y="${startY + (i * lineHeight)}" fill="${phaseConfig.font}" font-family="Inter, monospace, sans-serif" font-size="14" font-weight="${fw}" text-anchor="middle">${escapeHtml(line)}</text>`;
+                });
+            });
+
+            svg += `</svg>`;
+
+            const blob = new Blob([svg], {type: 'image/svg+xml;charset=utf-8'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            const filename = ctfNameInput.value ? ctfNameInput.value.replace(/[^a-z0-9]/gi, '_').toLowerCase() : 'CTF_Snapshot';
+            a.download = filename + '_' + themeMode + '_' + new Date().toISOString().split('T')[0] + '.svg';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            logMsg("SVG Snapshot exported successfully");
+        };
+
+        // --- Unified IO Modals (Import/Export/AI) ---
+        window.setAIPrompt = function(type) {
+            const btnFull = document.getElementById('btnPromptFull');
+            const btnBulk = document.getElementById('btnPromptBulk');
+
+            const fullPrompt = `Please analyze the following CTF data and generate a structured report using EXACTLY this Markdown format. Do not deviate from this structure:
+
+## 🏆 CTF / Exercise Name
+[Insert CTF Name Here]
+
+## 🎯 Target & IPs
+[Insert Target Info Here]
+
+## 🔑 Credentials
+[Insert Credentials Here - Grouped by list]
+* **Service**: User : Password
+
+## 💰 Loot & Notes
+[Insert Structured Loot Info Here - Grouped by list]
+* **[Category]** [Title/Key]: [Value]
+(Valid Categories: Flag, Account, Hash, Info, Note)
+
+## 🕸️ Attack Timeline & Vectors
+* [Root Vector Name] {[phase_name]}
+  > CMD: \`[Command if any, replace newlines with \\n literal]\`
+  > OUT: \`[Output if any, replace newlines with \\n literal]\`
+  > NOTE: \`[Note if any, replace newlines with \\n literal]\`
+  * [Child Vector Name] {[phase_name]}
+
+[CRITICAL INSTRUCTION FOR ATTACK GRAPH]:
+If a node is logically connected to MULTIPLE parents, structure it as a graph by listing the child node under ALL of its parent nodes using the exact same name and phase tag. The system will link them.
+
+Available phases for the {phase_name} tag: recon, enum, exploit, post, privesc, loot. If unknown, omit the tag.`;
+
+            const bulkPrompt = `I will provide you with raw tool output (like an Nmap scan or directory enumeration).
+Please extract the discovered services/findings and format them EXACTLY as a flat list of nodes for a "Bulk Add" feature.
+
+Use this exact format:
+* [Node Name/Port/Service] {[phase_name]}
+  > CMD: \`[The command used, if applicable]\`
+  > OUT: \`[Relevant output/version info, replace newlines with \\n literal]\`
+  > NOTE: \`[Any concise observation]\`
+
+Example:
+* 22/tcp SSH {enum}
+  > CMD: \`nmap -sV -p 22 10.10.10.10\`
+  > OUT: \`OpenSSH 8.2p1 Ubuntu...\`
+* 80/tcp HTTP {enum}
+  > NOTE: \`Running Apache, found /admin directory\`
+
+Do not generate full CTF report headers. Only output the bulleted list.
+Available phases for the {phase_name} tag: recon, enum, exploit, post, privesc, loot. Default to 'enum' for scans.`;
+
+            if (type === 'full') {
+                ioModalTextarea.value = fullPrompt;
+                btnFull.classList.replace('bg-slate-700', 'bg-purple-600');
+                btnBulk.classList.replace('bg-purple-600', 'bg-slate-700');
+            } else {
+                ioModalTextarea.value = bulkPrompt;
+                btnBulk.classList.replace('bg-slate-700', 'bg-purple-600');
+                btnFull.classList.replace('bg-purple-600', 'bg-slate-700');
+            }
+        };
+
+        window.openAiPromptModal = function() {
+            openIOModal('ai');
+        }
+
+        window.openIOModal = function(mode, prefill = '') {
+            ioModal.style.display = 'flex';
+            ioModalTextarea.readOnly = false;
+            ioModalTextarea.value = prefill;
+            ioModalDesc.classList.remove('hidden');
+            document.getElementById('ioModalToolbar').classList.add('hidden');
+
+            if (mode === 'export') {
+                logMsg("Opening Export Modal");
+                ioModalTitle.textContent = "📤 Export Data";
+                ioModalDesc.textContent = "Copy the markdown below, or save it as a file.";
+                ioModalTextarea.readOnly = true;
+                ioModalTextarea.value = generateMarkdown();
+                
+                ioModalFooter.innerHTML = `
+                    <div>
+                        <button onclick="closeIOModal()" class="btn bg-slate-700 border-none">Cancel</button>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="copyIOText()" class="btn btn-purple">📋 Copy Text</button>
+                        <button onclick="downloadIOFile()" class="btn btn-green">💾 Download File</button>
+                    </div>
+                `;
+            } else if (mode === 'import') {
+                logMsg("Opening Import Modal");
+                ioModalTitle.textContent = "📥 Import Data";
+                ioModalDesc.textContent = "Paste Markdown below to load it into the board, or upload a file.";
+                ioModalFooter.innerHTML = `
+                    <div>
+                        <button onclick="closeIOModal()" class="btn bg-slate-700 border-none">Cancel</button>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="document.getElementById('hiddenFileInput').click()" class="btn btn-blue">📂 Choose File</button>
+                        <button onclick="processIOImport()" class="btn btn-green">🚀 Load from Text</button>
+                    </div>
+                `;
+            } else if (mode === 'ai') {
+                logMsg("Opening AI Prompt Modal");
+                ioModalTitle.textContent = "🤖 AI Prompt Templates";
+                ioModalDesc.textContent = "Copy the template below and paste it to ChatGPT/Claude with your raw notes/scans.";
+                ioModalTextarea.readOnly = true;
+                
+                document.getElementById('ioModalToolbar').classList.remove('hidden');
+                setAIPrompt('full');
+
+                ioModalFooter.innerHTML = `
+                    <div>
+                        <button onclick="closeIOModal()" class="btn bg-slate-700 border-none">Close</button>
+                    </div>
+                    <button onclick="copyIOText()" class="btn btn-green">📋 Copy to Clipboard</button>
+                `;
+            }
+        }
+
+        window.closeIOModal = function() {
+            ioModal.style.display = 'none';
+            hiddenFileInput.value = '';
+        }
+
+        window.copyIOText = function() {
+            copyToClipboard(ioModalTextarea.value);
+            alert('Copied to clipboard!');
+        }
+
+        window.downloadIOFile = function() {
+            const md = ioModalTextarea.value;
+            const blob = new Blob([md], { type: 'text/markdown' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            const filename = ctfNameInput.value ? ctfNameInput.value.replace(/[^a-z0-9]/gi, '_').toLowerCase() : 'CTF_Report';
+            a.download = `${filename}_${new Date().toISOString().split('T')[0]}.md`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            logMsg("Markdown file downloaded");
+        }
+
+        window.handleFileUpload = function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                ioModalTextarea.value = e.target.result;
+            };
+            reader.readAsText(file);
+        }
+
+        window.processIOImport = function() {
+            const txt = ioModalTextarea.value;
+            if(txt.trim() === '') return;
+            try {
+                recordState();
+                parseMarkdownToBoard(txt);
+                closeIOModal();
+                logMsg("Markdown successfully imported");
+            } catch(e) {
+                logMsg(`Import failed: ${e.message}`, "ERROR");
+                alert("Import failed. Check logs for details.");
+            }
+        }
+
+        // Markdown Engine Core
+        function generateMarkdown() {
+            let md = "# CTF Detective Board Report\n\n";
+            md += "## 🏆 CTF / Exercise Name\n" + (ctfNameInput.value || "None") + "\n\n";
+            md += "## 🎯 Target & IPs\n" + (targetNotes.value || "None") + "\n\n";
+            
+            md += "## 🔑 Credentials\n";
+            if (credentialsArray.length === 0) {
+                md += "None\n\n";
+            } else {
+                credentialsArray.forEach(c => {
+                    md += `* **${c.service}**: ${c.user} : ${c.pass}\n`;
+                });
+                md += "\n";
+            }
+
+            md += "## 💰 Loot & Notes\n";
+            if (lootArray.length === 0) {
+                md += "None\n\n";
+            } else {
+                lootArray.forEach(L => {
+                    md += `* **${L.type}** ${L.title}: ${L.content.replace(/\n/g, '\\n')}\n`;
+                });
+                md += "\n";
+            }
+
+            md += "## 🕸️ Attack Timeline & Vectors\n";
+            
+            const allEdges = edges.get();
+            const allNodes = nodes.get();
+            const rootNodes = allNodes.filter(n => !allEdges.find(e => e.to === n.id));
+
+            if (rootNodes.length === 0) {
+                md += "No vectors documented.\n";
+            } else {
+                let printedEdges = new Set();
+                
+                function traverse(nodeId, depth) {
+                    const node = nodes.get(nodeId);
+                    const indent = "  ".repeat(depth);
+                    const phaseTag = node.phase && node.phase !== 'none' ? ` {${node.phase}}` : "";
+                    md += `${indent}* ${node.rawLabel}${phaseTag}\n`;
+                    
+                    if (node.command && node.command.trim() !== '') {
+                        const safeCmd = node.command.replace(/\n/g, '\\n').replace(/`/g, '\\`');
+                        md += `${indent}  > CMD: \`${safeCmd}\`\n`;
+                    }
+                    if (node.output && node.output.trim() !== '') {
+                        const safeOut = node.output.replace(/\n/g, '\\n').replace(/`/g, '\\`');
+                        md += `${indent}  > OUT: \`${safeOut}\`\n`;
+                    }
+                    if (node.note && node.note.trim() !== '') {
+                        const safeNote = node.note.replace(/\n/g, '\\n').replace(/`/g, '\\`');
+                        md += `${indent}  > NOTE: \`${safeNote}\`\n`;
+                    }
+                    
+                    const childrenEdges = edges.get({ filter: e => e.from === nodeId });
+                    childrenEdges.forEach(e => {
+                        const edgeKey = `${e.from}->${e.to}`;
+                        if (!printedEdges.has(edgeKey)) {
+                            printedEdges.add(edgeKey);
+                            traverse(e.to, depth + 1);
+                        }
+                    });
+                }
+                rootNodes.forEach(root => traverse(root.id, 0));
+            }
+            return md;
+        }
+
+        function parseMarkdownToBoard(md) {
+            const sections = md.split('## ');
+            nodes.clear(); edges.clear(); credentialsArray = []; lootArray = [];
+            
+            const nodeNameMap = new Map();
+
+            sections.forEach(sec => {
+                if (sec.startsWith('🏆 CTF / Exercise Name')) ctfNameInput.value = sec.replace('🏆 CTF / Exercise Name\n', '').trim();
+                else if (sec.startsWith('🎯 Target & IPs')) targetNotes.value = sec.replace('🎯 Target & IPs\n', '').trim();
+                
+                else if (sec.startsWith('🔑 Credentials')) {
+                    const lines = sec.split('\n').slice(1);
+                    lines.forEach(line => {
+                        const match = line.match(/^\*\s*\*\*([^\*]+)\*\*:\s*([^:]+)\s*:\s*(.*)$/);
+                        if (match) {
+                            credentialsArray.push({ id: generateId(), service: match[1].trim(), user: match[2].trim(), pass: match[3].trim() });
+                        }
+                    });
+                    renderCredentials();
+                }
+                else if (sec.startsWith('💰 Loot & Notes')) {
+                    const lines = sec.split('\n').slice(1);
+                    lines.forEach(line => {
+                        const match = line.match(/^\*\s*\*\*([^\*]+)\*\*\s+([^:]+):\s*(.*)$/);
+                        if (match) {
+                            lootArray.push({ id: generateId(), type: match[1].trim(), title: match[2].trim(), content: match[3].trim().replace(/\\n/g, '\n') });
+                        }
+                    });
+                    renderLoot();
+                }
+                else if (sec.startsWith('🕸️ Attack Timeline')) {
+                    const lines = sec.split('\n').slice(1);
+                    let stack = []; 
+
+                    lines.forEach(line => {
+                        if (line.trim() === '') return;
+
+                        const cmdMatch = line.match(/^\s*> CMD: `(.*)`\s*$/);
+                        if (cmdMatch && stack.length > 0) {
+                            const node = nodes.get(stack[stack.length - 1].id);
+                            node.command = cmdMatch[1].replace(/\\n/g, '\n').replace(/\\`/g, '`');
+                            node.label = getDisplayLabel(node.rawLabel, node.phase, node.command, node.output, node.note);
+                            nodes.update(node); return;
+                        }
+
+                        const outMatch = line.match(/^\s*> OUT: `(.*)`\s*$/);
+                        if (outMatch && stack.length > 0) {
+                            const node = nodes.get(stack[stack.length - 1].id);
+                            node.output = outMatch[1].replace(/\\n/g, '\n').replace(/\\`/g, '`');
+                            node.label = getDisplayLabel(node.rawLabel, node.phase, node.command, node.output, node.note);
+                            nodes.update(node); return;
+                        }
+
+                        const noteMatch = line.match(/^\s*> NOTE: `(.*)`\s*$/);
+                        if (noteMatch && stack.length > 0) {
+                            const node = nodes.get(stack[stack.length - 1].id);
+                            node.note = noteMatch[1].replace(/\\n/g, '\n').replace(/\\`/g, '`');
+                            node.label = getDisplayLabel(node.rawLabel, node.phase, node.command, node.output, node.note);
+                            nodes.update(node); return;
+                        }
+
+                        if (!line.trim().startsWith('*')) return;
+                        
+                        const leadingSpaces = line.match(/^(\s*)\*/)[1].length;
+                        const depth = leadingSpaces / 2;
+                        
+                        let labelText = line.replace(/^\s*\*\s*/, '').trim();
+                        let phaseMatch = labelText.match(/ \{(.+)\}$/);
+                        let phase = 'none';
+                        if (phaseMatch) {
+                            phase = phaseMatch[1];
+                            labelText = labelText.replace(phaseMatch[0], '');
+                        }
+
+                        const mapKey = `${labelText}_${phase}`;
+                        let newId;
+                        
+                        if (nodeNameMap.has(mapKey)) {
+                            newId = nodeNameMap.get(mapKey);
+                        } else {
+                            newId = generateId();
+                            nodes.add(createNodeObject(newId, labelText, phase, '', '', '', depth)); 
+                            nodeNameMap.set(mapKey, newId);
+                        }
+
+                        if (depth === 0) {
+                            stack = [{ depth: 0, id: newId }];
+                        } else {
+                            while (stack.length > 0 && stack[stack.length - 1].depth >= depth) stack.pop();
+                            if (stack.length > 0) {
+                                const parentId = stack[stack.length - 1].id;
+                                const edgeExists = edges.get({filter: e => e.from === parentId && e.to === newId}).length > 0;
+                                if (!edgeExists && parentId !== newId) {
+                                    edges.add({ from: parentId, to: newId });
+                                }
+                            }
+                            stack.push({ depth: depth, id: newId });
+                        }
+                    });
+                }
+            });
+            saveState();
+            setTimeout(autoArrangeGraph, 200);
+        }
+
+        // --- Persistence ---
+        function saveState() {
+            const state = {
+                ctfName: ctfNameInput.value,
+                target: targetNotes.value,
+                credentials: credentialsArray,
+                loot: lootArray,
+                nodes: nodes.get(),
+                edges: edges.get(),
+                theme: currentTheme
+            };
+            localStorage.setItem('ctf_board_v13_state', JSON.stringify(state));
+        }
+
+        function loadState() {
+            logMsg("Loading state from LocalStorage");
+            const saved = localStorage.getItem('ctf_board_v13_state');
+            if (saved) {
+                try {
+                    const state = JSON.parse(saved);
+                    
+                    if (state.theme) {
+                        currentTheme = state.theme;
+                        applyTheme(currentTheme);
+                    }
+                    
+                    if(state.ctfName) ctfNameInput.value = state.ctfName;
+                    
+                    if(state.target) targetNotes.value = state.target;
+                    else targetNotes.value = DEFAULT_TARGET_TEXT;
+
+                    if(state.credentials && Array.isArray(state.credentials)) credentialsArray = state.credentials;
+                    else credentialsArray = [];
+                    renderCredentials();
+
+                    if(state.loot && Array.isArray(state.loot)) lootArray = state.loot;
+                    else lootArray = [];
+                    renderLoot();
+
+                    if(state.nodes && state.nodes.length > 0) {
+                        nodes.add(state.nodes);
+                        edges.add(state.edges || []);
+                    } else createDefaultRoot();
+                    
+                    logMsg("State loaded successfully");
+                } catch (e) { 
+                    logMsg(`State load error: ${e.message}`, "ERROR");
+                    createDefaultRoot(); 
+                }
+            } else {
+                createDefaultRoot();
+            }
+            
+            historyStack = [];
+            redoStack = [];
+            updateUndoRedoUI();
+        }
+
+        function createDefaultRoot() {
+            const rootId = generateId();
+            nodes.add(createNodeObject(rootId, "Target Machine", "none", '', '', '', 0)); 
+            targetNotes.value = DEFAULT_TARGET_TEXT;
+            credentialsArray = [];
+            lootArray = [];
+            renderCredentials();
+            renderLoot();
+            saveState();
+            logMsg("Created default root workspace");
+        }
+
+        window.safeClearAll = function() {
+            if(confirm("Download current data to Markdown and fully clear the board?")) {
+                logMsg("Executing Safe Clear All");
+                const md = generateMarkdown();
+                const blob = new Blob([md], { type: 'text/markdown' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                const filename = ctfNameInput.value ? ctfNameInput.value.replace(/[^a-z0-9]/gi, '_').toLowerCase() : 'CTF_Report';
+                a.download = `${filename}_${new Date().toISOString().split('T')[0]}.md`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                setTimeout(() => {
+                    recordState(); 
+                    ctfNameInput.value = ''; 
+                    targetNotes.value = DEFAULT_TARGET_TEXT; 
+                    credentialsArray = [];
+                    lootArray = [];
+                    nodes.clear(); edges.clear();
+                    renderCredentials();
+                    renderLoot();
+                    createDefaultRoot();
+                    saveState();
+                    logMsg("Workspace cleared successfully");
+                }, 800);
+            }
+        }
+
+        ctfNameInput.addEventListener('input', saveState);
+        targetNotes.addEventListener('input', saveState);
+
+        window.addEventListener('DOMContentLoaded', () => { 
+            initGraph(); 
+            loadState(); 
+        });
+
+    </script>
+</body>
+</html>
