@@ -68,6 +68,10 @@ social:
 github:
   username: "yayaya142"
 
+analytics:
+  google:
+    id: "G-9GVS43XFRB"
+
 theme_mode:
 
 exclude:
