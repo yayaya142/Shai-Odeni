@@ -7,11 +7,11 @@ subcategories:
   - proxmox
   - home-assistant
 tags:
-  - Proxmox
-  - Home Assistant
-  - Jellyfin
+  - proxmox
+  - home-assistant
+  - jellyfin
   - n8n
-  - AdGuard Home
+  - adguard-home
   - self-hosting
 type: project-story
 summary: "A deep look into how my home lab is structured and why each part exists."
