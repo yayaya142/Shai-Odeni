@@ -16,6 +16,9 @@ tags:
 type: technical-breakdown
 summary: "A hidden SweetRice instance, an exposed SQL backup, and a writable script in a sudo-approved backup chain turn a narrow web foothold into root."
 featured: false
+image:
+  path: "https://lh3.googleusercontent.com/d/16h1afVmZFk8VWfygIEM0luQSh5fPZTN2=w2000"
+  alt: "Lazy Admin attack path overview"
 ---
 
 Machine: [LazyAdmin](https://tryhackme.com/room/lazyadmin)
