@@ -1,6 +1,6 @@
 ---
 title: "Lazy Admin: From Hidden SweetRice to Root Through a Backup Script"
-date: 2026-05-14 09:00:00 +0300
+date: 2026-05-05 09:00:00 +0300
 category: cybersecurity
 subcategories:
   - ctf
