@@ -17,7 +17,7 @@ storage while remaining strong in taxonomy and presentation.
 ## Optional fields
 
 - `series`
-- `updated`
+- `last_modified_at`
 - `toc`
 - `image`
 - `draft`
@@ -32,6 +32,7 @@ storage while remaining strong in taxonomy and presentation.
 - `summary` should be short, concrete, and readable.
 - `featured` must be a boolean.
 - `pin` should be used sparingly for the strongest identity-defining posts.
+- `last_modified_at` should record a meaningful content update using the same timestamp format as `date`; do not change it for trivial formatting edits.
 
 ## Preferred starting categories
 
